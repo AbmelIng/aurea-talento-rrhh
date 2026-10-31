@@ -1,0 +1,111 @@
+@if (!api.user()) {
+  <main class="login-layout">
+    <section class="login-intro">
+      <div class="brand-mark">AT<span>✦</span></div>
+      <div class="eyebrow">SISTEMA DE RECURSOS HUMANOS</div>
+      <h1>La firma empieza<br>con su gente.</h1>
+      <p>Aurea Talento reúne la información del equipo de auditoría en un lugar claro y protegido.</p>
+      <div class="login-features"><span>01 · Mi expediente</span><span>02 · Personas</span><span>03 · Acceso por rol</span></div>
+      <small>Demostración académica con datos ficticios · Guatemala</small>
+    </section>
+    <section class="login-panel">
+      <div class="login-card">
+        <div class="eyebrow">BIENVENIDO</div>
+        <h2>Ingresa a tu espacio</h2>
+        <p>Elige una cuenta de prueba o escribe tus credenciales.</p>
+        <form [formGroup]="loginForm" (ngSubmit)="login()" class="form-stack">
+          <label>Correo institucional<input type="email" formControlName="email" autocomplete="username" placeholder="nombre@firma.com"></label>
+          <label>Contraseña<input type="password" formControlName="password" autocomplete="current-password" placeholder="••••••••"></label>
+          <button class="button primary full" type="submit" [disabled]="loading()">{{ loading() ? 'Ingresando…' : 'Ingresar al sistema' }} <span>→</span></button>
+        </form>
+        @if (error()) { <p class="alert error" role="alert">{{ error() }}</p> }
+        <div class="demo-title"><span>Cuentas para la demostración</span><i></i></div>
+        <div class="demo-grid">
+          @for (account of demoAccounts; track account.email) {
+            <button type="button" class="demo-account" (click)="fillDemo(account.email)"><span class="mini-avatar">{{ account.initials }}</span><span><b>{{ account.label }}</b><small>{{ account.email }}</small></span><span class="demo-arrow">↗</span></button>
+          }
+        </div>
+        <p class="demo-hint">Clave común de demostración: <strong>Demo2026!</strong></p>
+      </div>
+    </section>
+  </main>
+} @else {
+  <header class="topbar">
+    <div class="topbar-inner">
+      <button type="button" class="brand" (click)="openMe()" aria-label="Ir a Mi información"><span class="brand-icon">A✦</span><span>Aurea <b>Talento</b></span></button>
+      <nav class="main-nav" aria-label="Navegación principal">
+        <button type="button" [class.active]="page() === 'me'" (click)="openMe()">Mi información</button>
+        @if (canSeePeople()) { <button type="button" [class.active]="page() === 'people' || page() === 'profile' || page() === 'new'" (click)="openPeople()">Personas</button> }
+        @if (canManage()) { <button type="button" [class.active]="page() === 'requests'" (click)="openRequests()">Solicitudes</button> }
+        @if (isAdmin()) { <button type="button" [class.active]="page() === 'settings'" (click)="openSettings()">Configuración</button> }
+      </nav>
+      <div class="session"><span class="session-avatar">{{ initials(me()) }}</span><span class="session-copy"><b>{{ fullName(me()) }}</b><small>{{ roleName(api.user()?.role) }}</small></span><button type="button" class="logout" (click)="logout()">Salir</button></div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    @if (loading()) { <div class="progress" aria-label="Cargando"></div> }
+    @if (error()) { <div class="alert error" role="alert">{{ error() }} <button type="button" (click)="error.set('')">×</button></div> }
+    @if (notice()) { <div class="alert success" role="status">{{ notice() }} <button type="button" (click)="notice.set('')">×</button></div> }
+
+    @if (page() === 'me' || page() === 'profile') {
+      @if (profile(); as employee) {
+        <section class="profile-hero">
+          <div class="hero-content"><div class="hero-avatar">{{ initials(employee) }}</div><div><div class="eyebrow">{{ page() === 'me' ? 'MI INFORMACIÓN' : 'EXPEDIENTE DEL EMPLEADO' }}</div><h1>{{ fullName(employee) }}</h1><p>{{ employee.job_title }} <span class="separator">/</span> {{ employee.area }}</p></div></div>
+          <div class="hero-side"><span class="status-chip">● {{ employee.status }}</span><span>{{ employee.code }}</span></div>
+        </section>
+        <div class="profile-tabs" role="tablist" aria-label="Secciones del expediente"><button type="button" role="tab" [attr.aria-selected]="tab() === 'personal'" [class.active]="tab() === 'personal'" (click)="tab.set('personal')">Información personal</button><button type="button" role="tab" [attr.aria-selected]="tab() === 'job'" [class.active]="tab() === 'job'" (click)="tab.set('job')">Puesto e historial</button></div>
+        <div class="profile-layout">
+          <aside class="profile-aside">
+            <div class="aside-section"><span class="aside-label">CONTACTO</span><strong>{{ employee.work_email }}</strong><p>{{ employee.phone || 'Teléfono no registrado' }}</p></div>
+            <div class="aside-section"><span class="aside-label">FECHA DE INGRESO</span><strong>{{ employee.hire_date | date:'dd/MM/yyyy' }}</strong><p>{{ employee.employment_type }}</p></div>
+            <div class="aside-section"><span class="aside-label">ORGANIZACIÓN</span><div class="info-pair"><span>Área</span><b>{{ employee.area }}</b></div><div class="info-pair"><span>Sede</span><b>{{ employee.office }}</b></div><div class="info-pair"><span>Línea</span><b>{{ employee.service_line || '—' }}</b></div></div>
+            <div class="aside-section"><span class="aside-label">RESPONSABLE</span><strong>{{ employee.manager_first_name ? employee.manager_first_name + ' ' + employee.manager_last_name : 'Sin responsable asignado' }}</strong></div>
+            @if (page() === 'profile') { <button type="button" class="aside-back" (click)="openPeople()">← Volver a Personas</button> }
+          </aside>
+          <section class="profile-main">
+            @if (tab() === 'personal') {
+              <div class="section-header"><div><div class="eyebrow">EXPEDIENTE</div><h2>Información personal</h2><p>Datos de identificación y contacto del colaborador.</p></div><span class="outline-chip">{{ isOwnProfile() ? 'Mi perfil' : roleName(employee.role) }}</span></div>
+              <div class="panel"><h3>Datos básicos</h3><div class="detail-grid"><div><small>Código</small><b>{{ employee.code }}</b></div><div><small>Nombre completo</small><b>{{ fullName(employee) }}</b></div><div><small>Nombre preferido</small><b>{{ employee.preferred_name || '—' }}</b></div><div><small>Correo institucional</small><b>{{ employee.work_email }}</b></div>@if (employee.birth_date !== undefined) { <div><small>Fecha de nacimiento</small><b>{{ employee.birth_date ? (employee.birth_date | date:'dd/MM/yyyy') : '—' }}</b></div><div><small>DPI</small><b>{{ employee.dpi || '—' }}</b></div><div><small>NIT</small><b>{{ employee.nit || '—' }}</b></div><div><small>IGSS</small><b>{{ employee.igss || '—' }}</b></div> }</div></div>
+              @if (page() === 'me') {
+                <div class="panel"><div class="panel-heading"><div><h3>Actualiza tus datos de contacto</h3><p>Estos campos se guardan directamente y dejan registro de cambio.</p></div><span class="pill">Edición directa</span></div><form [formGroup]="selfForm" (ngSubmit)="saveSelf()"><div class="form-grid"><label>Nombre preferido<input formControlName="preferred_name"></label><label>Correo personal<input type="email" formControlName="personal_email"></label><label>Teléfono<input formControlName="phone" placeholder="+502 0000-0000"></label><label>Dirección<input formControlName="address"></label><label>Contacto de emergencia<input formControlName="emergency_name"></label><label>Teléfono de emergencia<input formControlName="emergency_phone" placeholder="+502 0000-0000"></label></div><button class="button primary" type="submit" [disabled]="loading()">Guardar cambios</button></form></div>
+                <div class="panel"><div class="panel-heading"><div><h3>Solicitar corrección de un dato</h3><p>RR. HH. revisa datos de identidad antes de aplicarlos.</p></div><span class="pill muted">Requiere aprobación</span></div><form [formGroup]="requestForm" (ngSubmit)="submitChange()" class="request-inline"><label>Campo<select [(ngModel)]="requestField" [ngModelOptions]="{standalone: true}">@for (field of requestFields; track field.value) { <option [value]="field.value">{{ field.label }}</option> }</select></label><label>Valor propuesto<input formControlName="proposed_value" placeholder="Escribe el dato correcto"></label><button class="button secondary" type="submit">Enviar solicitud</button></form>@if (requests().length) { <div class="request-list">@for (request of requests(); track request.id) { @if (request.employee_id === employee.id) { <div><span>{{ request.field }}</span><b [class.pending]="request.status === 'Pendiente'">{{ request.status }}</b></div> } }</div> }</div>
+              } @else if (canManage()) {
+                <div class="panel"><div class="panel-heading"><div><h3>Editar expediente</h3><p>Los cambios sensibles quedan registrados.</p></div><span class="pill">RR. HH.</span></div><form [formGroup]="editForm" (ngSubmit)="saveEmployee()"><div class="form-grid"><label>Primer nombre<input formControlName="first_name"></label><label>Apellido<input formControlName="last_name"></label><label>Nombre preferido<input formControlName="preferred_name"></label><label>Correo institucional<input type="email" formControlName="work_email"></label><label>Correo personal<input type="email" formControlName="personal_email"></label><label>Teléfono<input formControlName="phone"></label><label>Fecha de nacimiento<input type="date" formControlName="birth_date"></label><label>DPI<input formControlName="dpi" maxlength="13"></label><label>NIT<input formControlName="nit"></label><label>Afiliación IGSS<input formControlName="igss"></label><label class="span-2">Dirección<input formControlName="address"></label><label>Contacto de emergencia<input formControlName="emergency_name"></label><label>Teléfono de emergencia<input formControlName="emergency_phone"></label></div><button class="button primary" type="submit" [disabled]="loading()">Guardar expediente</button></form></div>
+              }
+            } @else {
+              <div class="section-header"><div><div class="eyebrow">TRAYECTORIA</div><h2>Puesto e historial</h2><p>Condiciones laborales y cambios registrados.</p></div></div>
+              <div class="panel"><h3>Condiciones vigentes</h3><div class="detail-grid"><div><small>Puesto</small><b>{{ employee.job_title }}</b></div><div><small>Área</small><b>{{ employee.area }}</b></div><div><small>Línea de servicio</small><b>{{ employee.service_line || '—' }}</b></div><div><small>Sede</small><b>{{ employee.office }}</b></div><div><small>Contratación</small><b>{{ employee.employment_type }}</b></div><div><small>Estado</small><b>{{ employee.status }}</b></div></div></div>
+              @if (page() === 'profile' && canManage()) { <div class="panel"><div class="panel-heading"><div><h3>Actualizar condiciones laborales</h3><p>Cada actualización crea una entrada en el historial.</p></div></div><form [formGroup]="editForm" (ngSubmit)="saveEmployee()"><div class="form-grid"><label>Puesto<input formControlName="job_title"></label><label>Área<input formControlName="area"></label><label>Línea de servicio<input formControlName="service_line"></label><label>Sede<input formControlName="office"></label><label>Tipo de contratación<input formControlName="employment_type"></label><label>Fecha de ingreso<input type="date" formControlName="hire_date"></label><label>Estado<select formControlName="status"><option>Activo</option><option>Inactivo</option><option>Suspendido</option></select></label><label>Responsable<select formControlName="manager_id"><option [ngValue]="0">Sin responsable</option>@for (person of managers(); track person.id) { <option [ngValue]="person.id">{{ fullName(person) }}</option> }</select></label></div><button class="button primary" type="submit" [disabled]="loading()">Guardar cambio laboral</button></form></div> }
+              @if (page() === 'profile') { <div class="panel"><h3>Historial del puesto</h3>@if (history().length) { <div class="timeline">@for (entry of history(); track entry.id) { <div class="timeline-row"><span class="timeline-dot"></span><div><b>{{ entry.job_title }}</b><p>{{ entry.area }} · {{ entry.office }} · {{ entry.status }}</p></div><time>{{ entry.effective_date | date:'dd/MM/yyyy' }}</time></div> }</div> } @else { <p class="empty">Aún no se registran cambios de puesto.</p> }</div> }
+            }
+          </section>
+        </div>
+      }
+    }
+
+    @if (page() === 'people') {
+      <div class="page-heading"><div><div class="eyebrow">EQUIPO</div><h1>Personas <span class="heading-count">{{ employees().length }}</span></h1><p>{{ canManage() ? 'Consulta y administra los expedientes del equipo.' : 'Consulta los perfiles de tus colaboradores directos.' }}</p></div>@if (canManage()) { <button type="button" class="button primary" (click)="openNew()">＋ Nuevo empleado</button> }</div>
+      <section class="panel list-panel"><div class="table-toolbar"><label class="search-box"><span>⌕</span><input [(ngModel)]="search" (keyup.enter)="openPeople()" placeholder="Buscar nombre, código o puesto"></label><label class="filter-label">Estado<select [(ngModel)]="status" (change)="openPeople()"><option>Activo</option><option>Inactivo</option><option>Suspendido</option><option>Todos</option></select></label><button type="button" class="button secondary small" (click)="openPeople()">Buscar</button></div><div class="table-wrap"><table><thead><tr><th>Colaborador</th><th>Código</th><th>Puesto y área</th><th>Sede</th><th>Ingreso</th><th>Estado</th></tr></thead><tbody>@for (person of employees(); track person.id) { <tr><td><button type="button" class="person-link" (click)="openProfile(person.id)"><span class="mini-avatar">{{ initials(person) }}</span><span><b>{{ fullName(person) }}</b><small>{{ person.work_email }}</small></span></button></td><td>{{ person.code }}</td><td><b>{{ person.job_title }}</b><small>{{ person.area }}</small></td><td>{{ person.office }}</td><td>{{ person.hire_date | date:'dd/MM/yyyy' }}</td><td><span class="table-status">{{ person.status }}</span></td></tr> } @empty { <tr><td colspan="6" class="empty">No hay empleados que coincidan con el filtro.</td></tr> }</tbody></table></div></section>
+    }
+
+    @if (page() === 'new' && canManage()) {
+      <div class="page-heading"><div><div class="eyebrow">PERSONAS / NUEVO</div><h1>Nuevo empleado</h1><p>Crea el expediente y una cuenta de acceso para la demostración.</p></div><button type="button" class="button secondary" (click)="openPeople()">← Volver</button></div>
+      <form [formGroup]="employeeForm" (ngSubmit)="createEmployee()" class="panel new-form"><h2>Datos personales</h2><div class="form-grid"><label>Código de empleado *<input formControlName="code" placeholder="A-007"></label><label>Fecha de ingreso *<input type="date" formControlName="hire_date"></label><label>Primer nombre *<input formControlName="first_name"></label><label>Apellido *<input formControlName="last_name"></label><label>Correo institucional *<input type="email" formControlName="work_email"></label><label>Teléfono<input formControlName="phone" placeholder="+502 0000-0000"></label></div><h2>Datos laborales</h2><div class="form-grid"><label>Puesto *<input formControlName="job_title" placeholder="Auditor junior"></label><label>Área *<input formControlName="area" placeholder="Auditoría externa"></label><label>Línea de servicio<input formControlName="service_line" placeholder="Auditoría"></label><label>Sede *<input formControlName="office"></label><label>Tipo de contratación<select formControlName="employment_type"><option>Plazo indefinido</option><option>Plazo fijo</option><option>Por obra o servicio</option><option>Pasantía</option></select></label><label>Responsable<select formControlName="manager_id"><option [ngValue]="0">Sin responsable</option>@for (person of managers(); track person.id) { <option [ngValue]="person.id">{{ fullName(person) }}</option> }</select></label></div><div class="form-actions"><button class="button primary" type="submit" [disabled]="loading()">Crear empleado</button><span>Los campos con * son obligatorios.</span></div></form>
+    }
+
+    @if (page() === 'profile' && credential(); as access) { <div class="credential-card" role="status"><div><strong>Acceso temporal del nuevo empleado</strong><p>Entrega estos datos por un canal seguro. La clave se muestra una sola vez en esta sesión.</p><code>{{ access.email }} · {{ access.password }}</code></div><button type="button" (click)="credential.set(null)" aria-label="Cerrar aviso">×</button></div> }
+
+    @if (page() === 'requests' && canManage()) {
+      <div class="page-heading"><div><div class="eyebrow">REVISIÓN DE DATOS</div><h1>Solicitudes de cambio</h1><p>Los datos anteriores siguen vigentes hasta que RR. HH. tome una decisión.</p></div></div>
+      <div class="panel"><div class="table-wrap"><table><thead><tr><th>Empleado</th><th>Campo</th><th>Valor propuesto</th><th>Fecha</th><th>Estado</th><th>Decisión</th></tr></thead><tbody>@for (request of requests(); track request.id) { <tr><td>{{ request.first_name }} {{ request.last_name }}</td><td>{{ request.field }}</td><td>{{ request.proposed_value }}</td><td>{{ request.created_at | date:'dd/MM/yyyy' }}</td><td><span class="table-status">{{ request.status }}</span></td><td>@if (request.status === 'Pendiente') { <div class="row-actions"><button type="button" (click)="resolveRequest(request.id, true)">Aprobar</button><button type="button" (click)="resolveRequest(request.id, false)">Rechazar</button></div> } @else { — }</td></tr> } @empty { <tr><td colspan="6" class="empty">No hay solicitudes registradas.</td></tr> }</tbody></table></div></div>
+    }
+
+    @if (page() === 'settings' && isAdmin()) {
+      <div class="page-heading"><div><div class="eyebrow">ADMINISTRACIÓN</div><h1>Configuración</h1><p>Información de la cuenta y niveles de acceso.</p></div></div>
+      <div class="settings-grid"><section class="panel account-card"><h2>Cuenta</h2>@if (account(); as info) { <div class="account-icon">✦</div><h3>{{ info.company }}</h3><p>{{ info.package }}</p><div class="info-pair"><span>País</span><b>{{ info.country }}</b></div><div class="info-pair"><span>Usuarios</span><b>{{ info.users }}</b></div> }</section><section class="panel levels-card"><h2>Niveles de acceso</h2><p>Un cambio de nivel modifica las pantallas disponibles en la próxima consulta.</p><div class="level-pills">@for (level of levels(); track level.role) { <span>{{ level.label }} <b>{{ level.total }}</b></span> }</div><div class="table-wrap"><table><thead><tr><th>Empleado</th><th>Nivel actual</th><th>Asignar nivel</th></tr></thead><tbody>@for (person of employees(); track person.id) { <tr><td><button type="button" class="text-link" (click)="openProfile(person.id)">{{ fullName(person) }}</button></td><td>{{ roleName(person.role) }}</td><td><div class="row-actions"><select [(ngModel)]="chosenRoles[person.id]"><option value="EMPLOYEE">Empleado</option><option value="MANAGER">Gerente</option><option value="HR_ADMIN">RR. HH.</option><option value="ADMIN">Administrador total</option></select><button type="button" (click)="changeRole(person.id)">Guardar</button></div></td></tr> }</tbody></table></div></section></div>
+      <section class="panel audit-panel"><h2>Actividad reciente</h2><p>Registro de acciones importantes; no incluye valores sensibles.</p><div class="audit-list">@for (entry of audit(); track entry.id) { <div><span class="timeline-dot"></span><b>{{ entry.action }}</b><span>Empleado #{{ entry.employee_id || '—' }}</span><time>{{ entry.created_at | date:'dd/MM/yyyy HH:mm' }}</time></div> } @empty { <p class="empty">Aún no hay cambios registrados.</p> }</div></section>
+    }
+  </main>
+  <footer class="app-footer">Aurea Talento · Demostración académica · Datos ficticios</footer>
+}
