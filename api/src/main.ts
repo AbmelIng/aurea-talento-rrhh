@@ -7,6 +7,11 @@ import { DatabaseService } from './database';
 import { PeopleService } from './people.service';
 import { PayrollService } from './payroll.service';
 import { SettingsService } from './settings.service';
+import { MvpController } from './mvp.controller';
+import { RecruitmentService } from './recruitment.service';
+import { LeaveService } from './leave.service';
+import { RecordsService } from './records.service';
+import { json } from 'express';
 
 function idParam(value: string): number {
   const id = Number(value);
@@ -176,8 +181,8 @@ class ApiController {
 }
 
 @Module({
-  controllers: [ApiController],
-  providers: [DatabaseService, AuthService, PeopleService, PayrollService, SettingsService, { provide: APP_GUARD, useClass: SessionGuard }],
+  controllers: [ApiController, MvpController],
+  providers: [DatabaseService, AuthService, PeopleService, PayrollService, SettingsService, RecruitmentService, LeaveService, RecordsService, { provide: APP_GUARD, useClass: SessionGuard }],
 })
 class AppModule {}
 
@@ -185,6 +190,7 @@ async function bootstrap() {
   if (process.env.NODE_ENV === 'production' && (!process.env.APP_SECRET || process.env.APP_SECRET.length < 32 || !process.env.WEB_ORIGIN))
     throw new Error('Producción requiere APP_SECRET (mínimo 32 caracteres) y WEB_ORIGIN');
   const app = await NestFactory.create(AppModule, { cors: { origin: [process.env.WEB_ORIGIN || 'http://localhost:4201', 'http://127.0.0.1:4201'] } });
+  app.use(json({limit:'8mb'}));
   await app.get(DatabaseService).initialize();
   const port = Number(process.env.PORT || 3001);
   await app.listen(port, '127.0.0.1');

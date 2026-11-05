@@ -2,17 +2,22 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AccessLevel, Account, ApiService, AuditEntry, ChangeRequest, Employee, JobHistory, Role, PayrollPeriod, Timesheet, ReviewSheet, PayReceipt, PayrollIssue, CatalogOption, FormOptions, CodeConfig } from './api.service';
+import { CareersComponent } from './careers.component';
+import { RecruitmentComponent } from './recruitment.component';
+import { LeaveComponent } from './leave.component';
+import { RecordsComponent } from './records.component';
 
-type Page = 'me' | 'people' | 'profile' | 'new' | 'settings' | 'requests' | 'time' | 'payments' | 'review' | 'payroll';
+type Page = 'me' | 'people' | 'profile' | 'new' | 'settings' | 'requests' | 'time' | 'payments' | 'review' | 'payroll' | 'recruitment' | 'leave' | 'records';
 type ProfileTab = 'personal' | 'job';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, CareersComponent, RecruitmentComponent, LeaveComponent, RecordsComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
 export class App implements OnInit {
+  readonly publicCareers = window.location.pathname.startsWith('/empleos');
   readonly api = inject(ApiService);
   private readonly fb = inject(FormBuilder);
   readonly page = signal<Page>('me');
@@ -109,8 +114,12 @@ export class App implements OnInit {
   readonly issueForm = this.fb.nonNullable.group({ message: ['', [Validators.required, Validators.minLength(10)]] });
 
   async ngOnInit(): Promise<void> {
+    if (this.publicCareers) return;
     if (await this.api.restore()) await this.loadMe();
   }
+  openRecruitment():void { this.resetMessages(); this.page.set('recruitment'); }
+  openLeave():void { this.resetMessages(); this.page.set('leave'); }
+  openRecords():void { this.resetMessages(); this.page.set('records'); }
 
   roleName(role?: string): string { return this.roleOptions.find(item => item.value === role)?.label || 'Empleado'; }
   catalogItems(category:string):CatalogOption[] { return this.formOptions()?.catalogs[category] || []; }

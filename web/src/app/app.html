@@ -1,4 +1,4 @@
-@if (!api.user()) {
+@if (publicCareers) { <app-careers /> } @else if (!api.user()) {
   <main class="login-layout">
     <section class="login-intro">
       <div class="brand-mark">AT<span>✦</span></div>
@@ -31,6 +31,9 @@
         @if (canSeePeople()) { <button type="button" [class.active]="page() === 'people' || page() === 'profile' || page() === 'new'" (click)="openPeople()">Personas</button> }
         <button type="button" [class.active]="page() === 'time'" (click)="openTime()">Mi tiempo</button>
         <button type="button" [class.active]="page() === 'payments'" (click)="openPayments()">Mis pagos</button>
+        @if (canSeePeople()) { <button type="button" [class.active]="page() === 'recruitment'" (click)="openRecruitment()">Reclutamiento</button> }
+        <button type="button" [class.active]="page() === 'leave'" (click)="openLeave()">Ausencias</button>
+        <button type="button" [class.active]="page() === 'records'" (click)="openRecords()">Expediente integral</button>
         @if (canReviewTime()) { <button type="button" [class.active]="page() === 'review'" (click)="openReview()">Revisión de horas</button> }
         @if (isPayroll()) { <button type="button" [class.active]="page() === 'payroll'" (click)="openPayroll()">Nómina</button> }
         @if (canManage()) { <button type="button" [class.active]="page() === 'requests'" (click)="openRequests()">Solicitudes</button> }
@@ -41,6 +44,9 @@
   </header>
 
   <main class="workspace">
+    @if (page() === 'recruitment') { <app-recruitment /> }
+    @if (page() === 'leave') { <app-leave /> }
+    @if (page() === 'records') { <app-records /> }
     @if (loading()) { <div class="progress" aria-label="Cargando"></div> }
     @if (error()) { <div class="alert error" role="alert">{{ error() }} <button type="button" (click)="error.set('')">×</button></div> }
     @if (notice()) { <div class="alert success" role="status">{{ notice() }} <button type="button" (click)="notice.set('')">×</button></div> }

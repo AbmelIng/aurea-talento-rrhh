@@ -1,0 +1,63 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+test('vacantes, postulación, ausencias y expediente con permisos', async()=>{
+  const folder=mkdtempSync(join(tmpdir(),'aurea-mvp-'));
+  const port=35000+Math.floor(Math.random()*20000),base=`http://127.0.0.1:${port}/api`;
+  const env={...process.env,PORT:String(port),SQLITE_FILE:join(folder,'mvp.sqlite'),UPLOAD_DIR:join(folder,'uploads'),APP_SECRET:'integration-test-secret-at-least-32-characters',BOOTSTRAP_EMAIL:'admin@empresa.example',BOOTSTRAP_FIRST_NAME:'Ada',BOOTSTRAP_LAST_NAME:'Admin'};
+  const req=async(path,method='GET',token='',body)=>{const response=await fetch(base+path,{method,headers:{...(token?{Authorization:`Bearer ${token}`}:{}) ,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});return {status:response.status,data:await response.json()};};
+  let server;
+  try {
+    const init=spawnSync(process.execPath,['dist/bootstrap-admin.js'],{cwd:process.cwd(),env,encoding:'utf8'});
+    assert.equal(init.status,0,init.stderr);
+    const password=/Contraseña inicial \(guardar ahora\): (\S+)/.exec(init.stdout)?.[1];assert.ok(password);
+    server=spawn(process.execPath,['dist/main.js'],{cwd:process.cwd(),env,stdio:'ignore'});
+    let ready=false;for(let i=0;i<100;i++){try{await fetch(base+'/careers');ready=true;break;}catch{await new Promise(r=>setTimeout(r,100));}}assert.ok(ready,'API iniciada');
+    const admin=(await req('/auth/login','POST','',{email:'admin@empresa.example',password})).data.token;
+    const categories=['job_title','area','service_line','office','employment_type'];const values=['Auditor','Auditoría','Auditoría financiera','Guatemala','Tiempo completo'];const ids={};
+    for(let i=0;i<categories.length;i++){const r=await req(`/settings/catalogs/${categories[i]}`,'POST',admin,{name:values[i]});ids[`${categories[i]}_id`]=r.data.id;}
+    const create=async(first,email,manager_id=0)=>req('/employees','POST',admin,{first_name:first,last_name:'Test',work_email:email,hire_date:'2026-11-01',...ids,manager_id});
+    const manager=await create('Gerente','gerente@empresa.example');assert.equal(manager.status,201);
+    const worker=await create('Empleado','empleado@empresa.example',manager.data.employee.id);assert.equal(worker.status,201);
+    await req(`/employees/${manager.data.employee.id}/role`,'PATCH',admin,{role:'MANAGER'});
+    const managerToken=(await req('/auth/login','POST','',{email:'gerente@empresa.example',password:manager.data.temporaryPassword})).data.token;
+    const workerToken=(await req('/auth/login','POST','',{email:'empleado@empresa.example',password:worker.data.temporaryPassword})).data.token;
+    const vacancy=await req('/vacancies','POST',admin,{title:'Auditor junior',area:'Auditoría',level:'Auditor junior',employment_type:'Tiempo completo',municipality:'Guatemala',department:'Guatemala',modality:'Presencial',description:'Revisión financiera',requirements:'Contabilidad',deadline:'2026-12-20',openings:2,hiring_manager_id:manager.data.employee.id,is_new_position:false});assert.equal(vacancy.status,201,JSON.stringify(vacancy.data));
+    const id=vacancy.data.id;
+    assert.equal((await req(`/vacancies/${id}/questions`,'PATCH',admin,{questions:[{title:'¿Tiene colegiado activo?',type:'yesno',required:true}]})).status,200);
+    assert.equal((await req(`/vacancies/${id}/actions/submit`,'POST',admin,{})).status,201);
+    assert.equal((await req(`/vacancies/${id}/actions/publish`,'POST',admin,{})).status,409);
+    assert.equal((await req(`/vacancies/${id}/actions/approve-manager`,'POST',managerToken,{})).status,201);
+    assert.equal((await req(`/vacancies/${id}/actions/approve-hr`,'POST',admin,{})).status,201);
+    assert.equal((await req(`/vacancies/${id}/actions/publish`,'POST',admin,{})).status,201);
+    assert.equal((await req('/careers')).data.length,1);
+    assert.equal((await req('/vacancies','GET',workerToken)).status,403);
+    const cv=Buffer.from('%PDF-1.4\n'+'x'.repeat(200_000)).toString('base64');
+    const apply={full_name:'Candidata Ejemplo',email:'candidata@example.com',phone:'55555555',municipality:'Guatemala',department:'Guatemala',education:'Licenciatura',salary_expectation:'Q5000',available_from:'2026-12-01',source:'LinkedIn',cv_name:'cv.pdf',cv_base64:cv,consent_process:true,answers:{q1:'Sí'}};
+    assert.equal((await req(`/careers/${id}/apply`,'POST','',{...apply,answers:{}})).status,400);
+    assert.equal((await req(`/careers/${id}/apply`,'POST','',apply)).status,201);
+    assert.equal((await req(`/careers/${id}/apply`,'POST','',apply)).status,409);
+    const applications=(await req(`/vacancies/${id}/applications`,'GET',admin)).data;assert.equal(applications.length,1);assert.equal((await req(`/applications/${applications[0].id}/cv`,'GET',workerToken)).status,403);
+    const type=await req('/leave/types','POST',admin,{name:'Vacaciones'});assert.equal(type.status,201);
+    const typeId=type.data[0].id;
+    await req(`/leave/balances/${worker.data.employee.id}/${typeId}`,'PATCH',admin,{hours:16});
+    const leave=await req('/leave/requests','POST',workerToken,{leave_type_id:typeId,start_date:'2026-12-10',end_date:'2026-12-10',hours:8});assert.equal(leave.status,201);
+    assert.equal((await req(`/leave/requests/${leave.data.id}/decision`,'PATCH',workerToken,{approve:true})).status,403);
+    assert.equal((await req(`/leave/requests/${leave.data.id}/decision`,'PATCH',managerToken,{approve:true})).status,200);
+    assert.equal(Number((await req('/leave/balances','GET',workerToken)).data[0].available_hours),8);
+    const catalog=await req('/records/benefits','POST',admin,{name:'Seguro médico'});assert.equal(catalog.status,201);
+    assert.equal((await req(`/records/employees/${worker.data.employee.id}/benefits`,'POST',admin,{benefit_id:catalog.data[0].id,effective_date:'2026-11-01',coverage:'Titular',employee_cost:10,company_cost:20})).status,201);
+    assert.equal((await req(`/records/employees/${worker.data.employee.id}/benefits`,'GET',workerToken)).data.length,1);
+    const training=await req('/records/trainings','POST',admin,{title:'Ética profesional'});
+    const assigned=await req(`/records/employees/${worker.data.employee.id}/trainings`,'POST',admin,{training_id:training.data[0].id});assert.equal(assigned.status,201);
+    assert.equal((await req(`/records/trainings/${assigned.data[0].id}/complete`,'PATCH',workerToken,{})).status,200);
+    const task=await req(`/records/employees/${worker.data.employee.id}/onboarding`,'POST',admin,{title:'Revisar bienvenida',assignee_role:'EMPLOYEE'});assert.equal(task.status,201);
+    assert.equal((await req(`/records/onboarding/${task.data[0].id}/complete`,'PATCH',workerToken,{})).status,200);
+    const doc=await req(`/records/employees/${worker.data.employee.id}/documents`,'POST',admin,{category:'General',title:'Carta',file_name:'carta.pdf',base64:cv,visible_to_employee:true});assert.equal(doc.status,201,JSON.stringify(doc.data));
+    assert.equal((await req(`/records/documents/${doc.data[0].id}/file`,'GET',workerToken)).status,200);
+  } finally {if(server?.exitCode===null){server.kill();await new Promise(resolve=>server.once('exit',resolve));}rmSync(folder,{recursive:true,force:true});}
+});

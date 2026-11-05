@@ -1,6 +1,6 @@
 # Aurea Talento — sistema de RR. HH.
 
-Aplicación Angular y NestJS con SQLite o MySQL. Esta copia conserva el módulo de empleados, acceso por rol, historial laboral, hojas de tiempo y recibos manuales del sprint 3. El tablero de Sprint Planning es otro proyecto.
+Aplicación Angular y NestJS con SQLite o MySQL. Esta copia conserva los sprints 1–3 e incorpora recorridos funcionales de los sprints 4–6: reclutamiento inicial, ausencias y expediente integral. El tablero de Sprint Planning es otro proyecto.
 
 ## Instalación de desarrollo
 
@@ -31,11 +31,19 @@ npm start
 
 Abre `http://localhost:4201`. La API escucha en `http://127.0.0.1:3001/api`. Después de iniciar sesión, configura los cinco catálogos en **Configuración**, revisa el formato de códigos y crea los empleados. La cuenta de Nómina se obtiene asignando ese rol a un empleado desde Configuración.
 
+### Recorrido de los sprints 4–6
+
+1. **Reclutamiento:** RR. HH. crea una vacante con responsable, nivel, ubicación en Guatemala, fecha límite y número de plazas. Puede agregar preguntas cortas, de sí/no o de opción múltiple. El responsable aprueba, RR. HH. aprueba y, para una plaza nueva, el administrador registra la ratificación adicional. RR. HH. publica la vacante. La página pública está en `http://localhost:4201/empleos` y cada vacante tiene un enlace `?id=...`. El candidato envía el formulario y su CV. RR. HH. consulta las candidaturas y sus documentos, y registra etapas iniciales o descarte.
+2. **Ausencias:** RR. HH. crea tipos y asigna saldos en horas. El empleado solicita un rango de fechas y horas; su gerente o RR. HH. aprueba o rechaza. La aprobación descuenta el saldo en una transacción. Las solicitudes aprobadas se muestran como próximas ausencias. La carga de horas es manual porque todavía no hay calendario de festivos ni jornadas variables.
+3. **Expediente integral:** RR. HH. registra beneficios, asigna capacitaciones, sube documentos y crea tareas de incorporación. El empleado ve su información permitida, puede subir documentos propios y completar capacitaciones y tareas asignadas. Los documentos restringidos se verifican en el servidor.
+
+Los archivos se almacenan en `api/data/uploads` por defecto. Usa `UPLOAD_DIR` para indicar un directorio persistente fuera del repositorio. Se aceptan PDF, DOC y DOCX de hasta 5 MB. **Todavía no existe escaneo antivirus; no abras la página pública a candidatos reales hasta agregarlo y revisar la retención de datos.**
+
 ## Base de datos y migración
 
 SQLite es el modo local predeterminado. Para MySQL 8.4, `compose.yaml` prepara un contenedor con volumen persistente. Define `MYSQL_PASSWORD` y `MYSQL_ROOT_PASSWORD` antes de `docker compose up -d`; después configura `DB_DRIVER=mysql`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` y `MYSQL_DATABASE` para la API. Véase `api/.env.example`. **El modo MySQL requiere una prueba de integración con un servidor MySQL disponible antes de usarlo con datos reales.**
 
-`api/src/database.ts` contiene la migración versionada `1`: crea `catalog_options` y `employee_code_config`, añade identificadores y claves foráneas de catálogo a `employees` y `employment_history`, y conserva los textos históricos. Las instalaciones anteriores se migran al arrancar; sus valores existentes pasan al catálogo. La migración no borra datos anteriores. Haz una copia de la base antes de actualizar.
+`api/src/database.ts` contiene migraciones versionadas. La versión 1 crea catálogos y códigos de empleado; la versión 2 incorpora las tablas de vacantes, candidaturas, ausencias, beneficios, documentos, capacitación e incorporación; la versión 3 agrega preguntas y respuestas de postulación. Las instalaciones anteriores se migran al arrancar sin borrar datos. Haz una copia de la base antes de actualizar.
 
 `api/data/` está excluido de la entrega mediante `.gitignore`. **No copies una base SQLite antigua con usuarios de demostración a una instalación nueva.** Para producción, usa una base vacía y ejecuta `bootstrap:admin` una sola vez. Los datos existentes no se eliminan automáticamente para evitar pérdida accidental.
 
@@ -51,7 +59,7 @@ SQLite es el modo local predeterminado. Para MySQL 8.4, `compose.yaml` prepara u
 
 Las contraseñas se guardan con `scrypt`; las sesiones firmadas expiran a las ocho horas. Cambiar la contraseña revoca las sesiones anteriores. `ADMIN` puede delegar el permiso **MODIFICACIÓN Catálogos del sistema** sin ceder el rol de administrador. Los formularios cargan opciones del backend y este valida que pertenezcan a la categoría y estén activas. El código de empleado se reserva en una transacción y tiene restricción única. La nómina de este sprint registra importes manuales: **no calcula impuestos ni ejecuta pagos**.
 
-Antes de atender clientes reales todavía se requiere revisar seguridad de despliegue, recuperación de cuentas, gestión de secretos, respaldo y restauración, retención de datos personales, auditoría de acceso y cumplimiento legal. El cambio de esquema se probó con SQLite; la ruta MySQL debe validarse en el entorno objetivo.
+Las etapas avanzadas de selección (evaluación técnica, verificaciones, independencia, ofertas y firma), correos automáticos, banco de talento, reglas de festivos y horarios variables, invitaciones, paquete de bienvenida firmado, cálculo de nómina, antivirus, conservación y eliminación automatizada de candidaturas y auditoría exhaustiva de accesos quedan pendientes. La ratificación de una plaza nueva usa provisionalmente el rol `ADMIN`; antes de uso real debe separarse un rol de socio. Antes de atender clientes reales también se requiere revisar seguridad de despliegue, recuperación de cuentas, gestión de secretos, respaldo y restauración, retención de datos personales y cumplimiento legal. El cambio de esquema se probó con SQLite; la ruta MySQL debe validarse en el entorno objetivo.
 
 ## Comprobación
 

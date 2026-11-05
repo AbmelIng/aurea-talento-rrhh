@@ -39,7 +39,7 @@ export class ApiService {
   private token = sessionStorage.getItem('aurea_token') || '';
   constructor(private readonly http: HttpClient) {}
 
-  private async request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown): Promise<T> {
+  async request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown): Promise<T> {
     try {
       return await firstValueFrom(this.http.request<T>(method, `${this.base}${path}`, {
         body, headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},

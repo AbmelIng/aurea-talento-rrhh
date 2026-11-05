@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import mysql, { Pool, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { scryptSync, randomBytes } from 'node:crypto';
+import { mysqlMvpSchema, sqliteMvpSchema } from './mvp-schema';
 
 export type Param = string | number | null;
 export type Row = Record<string, unknown>;
@@ -160,6 +161,7 @@ export class DatabaseService implements OnModuleDestroy {
   private pool?: Pool;
   private transactionOpen = false;
   private transactionTail: Promise<void> = Promise.resolve();
+  get isMysql(): boolean { return Boolean(this.pool); }
 
   async initialize(): Promise<void> {
     if (process.env.DB_DRIVER === 'mysql') {
@@ -234,6 +236,16 @@ export class DatabaseService implements OnModuleDestroy {
     if (!(await this.get('SELECT id FROM employee_code_config WHERE id=1'))) {
       const max = await this.get<{n:number}>('SELECT COALESCE(MAX(id),0) AS n FROM employees');
       await this.run('INSERT INTO employee_code_config (id,prefix,separator,digits,next_number) VALUES (1,?,?,?,?)',['EMP','-',4,Number(max?.n || 0)+1]);
+    }
+    if (!(await this.get('SELECT version FROM schema_migrations WHERE version=2'))) {
+      for (const sql of mysqlMode ? mysqlMvpSchema : sqliteMvpSchema) await this.executeDdl(sql);
+      await this.run('INSERT INTO schema_migrations (version,applied_at) VALUES (?,?)',[2,new Date().toISOString()]);
+    }
+    if (!(await this.get('SELECT version FROM schema_migrations WHERE version=3'))) {
+      for (const [table,column] of [['vacancies','questions_json'],['applications','answers_json']]) {
+        if(!(await this.hasColumn(table,column))) await this.executeDdl(`ALTER TABLE ${table} ADD COLUMN ${column} ${mysqlMode?'TEXT':'TEXT'}`);
+      }
+      await this.run('INSERT INTO schema_migrations (version,applied_at) VALUES (?,?)',[3,new Date().toISOString()]);
     }
   }
 
