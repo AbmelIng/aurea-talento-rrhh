@@ -43,6 +43,9 @@ test('vacantes, postulación, ausencias y expediente con permisos', async()=>{
     assert.equal((await req(`/careers/${id}/apply`,'POST','',apply)).status,409);
     const applications=(await req(`/vacancies/${id}/applications`,'GET',admin)).data;assert.equal(applications.length,1);assert.equal((await req(`/applications/${applications[0].id}/cv`,'GET',workerToken)).status,403);
     const type=await req('/leave/types','POST',admin,{name:'Vacaciones'});assert.equal(type.status,201);
+    assert.equal((await req('/leave/announcements','POST',workerToken,{title:'Falso',body:'No permitido'})).status,403);
+    assert.equal((await req('/leave/announcements','POST',admin,{title:'Bienvenida',body:'Aviso para el equipo'})).status,201);
+    assert.equal((await req('/leave/announcements','GET',workerToken)).data.length,1);
     const typeId=type.data[0].id;
     await req(`/leave/balances/${worker.data.employee.id}/${typeId}`,'PATCH',admin,{hours:16});
     const leave=await req('/leave/requests','POST',workerToken,{leave_type_id:typeId,start_date:'2026-12-10',end_date:'2026-12-10',hours:8});assert.equal(leave.status,201);
@@ -57,7 +60,13 @@ test('vacantes, postulación, ausencias y expediente con permisos', async()=>{
     assert.equal((await req(`/records/trainings/${assigned.data[0].id}/complete`,'PATCH',workerToken,{})).status,200);
     const task=await req(`/records/employees/${worker.data.employee.id}/onboarding`,'POST',admin,{title:'Revisar bienvenida',assignee_role:'EMPLOYEE'});assert.equal(task.status,201);
     assert.equal((await req(`/records/onboarding/${task.data[0].id}/complete`,'PATCH',workerToken,{})).status,200);
+    assert.equal((await req(`/records/employees/${worker.data.employee.id}/onboarding-packet`,'POST',workerToken,{welcome_text:'Bienvenido'})).status,403);
+    assert.equal((await req(`/records/employees/${worker.data.employee.id}/onboarding-packet`,'POST',admin,{welcome_text:'Bienvenido a la firma'})).status,201);
+    assert.equal((await req(`/records/employees/${worker.data.employee.id}/onboarding-packet/view`,'PATCH',workerToken,{})).data.status,'Visto');
     const doc=await req(`/records/employees/${worker.data.employee.id}/documents`,'POST',admin,{category:'General',title:'Carta',file_name:'carta.pdf',base64:cv,visible_to_employee:true});assert.equal(doc.status,201,JSON.stringify(doc.data));
     assert.equal((await req(`/records/documents/${doc.data[0].id}/file`,'GET',workerToken)).status,200);
+    const company=await req('/records/company-documents','POST',admin,{category:'Políticas',title:'Manual interno',file_name:'manual.pdf',base64:cv,audience:'hr'});
+    assert.equal(company.status,201);assert.equal((await req('/records/company-documents','GET',workerToken)).data.length,0);
+    assert.equal((await req(`/records/company-documents/${company.data[0].id}/file`,'GET',workerToken)).status,403);
   } finally {if(server?.exitCode===null){server.kill();await new Promise(resolve=>server.once('exit',resolve));}rmSync(folder,{recursive:true,force:true});}
 });

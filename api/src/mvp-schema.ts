@@ -28,3 +28,14 @@ export const mysqlMvpSchema = [
   `CREATE TABLE IF NOT EXISTS training_assignments (id INT AUTO_INCREMENT PRIMARY KEY, training_id INT NOT NULL, employee_id INT NOT NULL, due_date VARCHAR(10), status VARCHAR(30) NOT NULL DEFAULT 'Pendiente', completed_on VARCHAR(10), UNIQUE KEY uq_training_assignment (training_id,employee_id), FOREIGN KEY (training_id) REFERENCES trainings(id), FOREIGN KEY (employee_id) REFERENCES employees(id))`,
   `CREATE TABLE IF NOT EXISTS onboarding_tasks (id INT AUTO_INCREMENT PRIMARY KEY, employee_id INT NOT NULL, title VARCHAR(200) NOT NULL, assignee_role VARCHAR(30) NOT NULL, status VARCHAR(30) NOT NULL DEFAULT 'Pendiente', completed_at VARCHAR(30), created_at VARCHAR(30) NOT NULL, FOREIGN KEY (employee_id) REFERENCES employees(id))`,
 ];
+
+export const sqliteMvpExtras = [
+  `CREATE TABLE IF NOT EXISTS announcements (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, body TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_by INTEGER NOT NULL REFERENCES users(id), created_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS onboarding_packets (employee_id INTEGER PRIMARY KEY REFERENCES employees(id), welcome_text TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Enviado', sent_by INTEGER NOT NULL REFERENCES users(id), sent_at TEXT NOT NULL, viewed_at TEXT, canceled_at TEXT)`,
+  `CREATE TABLE IF NOT EXISTS company_documents (id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT NOT NULL, title TEXT NOT NULL, file_name TEXT NOT NULL, storage_name TEXT NOT NULL UNIQUE, audience TEXT NOT NULL DEFAULT 'all', uploaded_by INTEGER NOT NULL REFERENCES users(id), uploaded_at TEXT NOT NULL)`,
+];
+export const mysqlMvpExtras = [
+  `CREATE TABLE IF NOT EXISTS announcements (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(140) NOT NULL, body TEXT NOT NULL, active TINYINT(1) NOT NULL DEFAULT 1, created_by INT NOT NULL, created_at VARCHAR(30) NOT NULL, FOREIGN KEY (created_by) REFERENCES users(id))`,
+  `CREATE TABLE IF NOT EXISTS onboarding_packets (employee_id INT PRIMARY KEY, welcome_text TEXT NOT NULL, status VARCHAR(30) NOT NULL DEFAULT 'Enviado', sent_by INT NOT NULL, sent_at VARCHAR(30) NOT NULL, viewed_at VARCHAR(30), canceled_at VARCHAR(30), FOREIGN KEY (employee_id) REFERENCES employees(id), FOREIGN KEY (sent_by) REFERENCES users(id))`,
+  `CREATE TABLE IF NOT EXISTS company_documents (id INT AUTO_INCREMENT PRIMARY KEY, category VARCHAR(80) NOT NULL, title VARCHAR(140) NOT NULL, file_name VARCHAR(255) NOT NULL, storage_name VARCHAR(100) NOT NULL UNIQUE, audience VARCHAR(30) NOT NULL DEFAULT 'all', uploaded_by INT NOT NULL, uploaded_at VARCHAR(30) NOT NULL, FOREIGN KEY (uploaded_by) REFERENCES users(id))`,
+];

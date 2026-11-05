@@ -10,8 +10,8 @@ import { ApiService } from './api.service';
   @if(error()){<p class="mvp-error" role="alert">{{error()}}</p>}
   @if(sent()){<p class="mvp-success" role="status">Postulación recibida. Guarda el nombre de la vacante para tus consultas.</p>}
   <div class="mvp-grid">
-    <section>
-      @for(job of jobs();track job.id){<button type="button" class="mvp-card mvp-job" [class.selected]="selected()?.id===job.id" (click)="select(job)"><b>{{job.title}}</b><span>{{job.area}} · {{job.level}} · {{job.municipality}}, {{job.department}}</span><small>{{job.modality}} · {{job.employment_type}} · Hasta {{job.deadline}}</small></button>}
+    <section><label>Buscar vacantes<input class="mvp-search" [(ngModel)]="search" placeholder="Puesto, área o ubicación"></label>
+      @for(job of filteredJobs();track job.id){<button type="button" class="mvp-card mvp-job" [class.selected]="selected()?.id===job.id" (click)="select(job)"><b>{{job.title}}</b><span>{{job.area}} · {{job.level}} · {{job.municipality}}, {{job.department}}</span><small>{{job.modality}} · {{job.employment_type}} · Hasta {{job.deadline}}</small></button>}
       @if(!jobs().length){<div class="mvp-card">Por el momento no hay vacantes abiertas.</div>}
     </section>
     @if(selected();as job){<section class="mvp-card"><p class="mvp-kicker">VACANTE</p><h2>{{job.title}}</h2><p>{{job.description}}</p><h3>Requisitos</h3><p>{{job.requirements}}</p><hr><h3>Postulación</h3>
@@ -31,6 +31,7 @@ import { ApiService } from './api.service';
 export class CareersComponent implements OnInit {
   readonly api=inject(ApiService);
   readonly jobs=signal<any[]>([]); readonly selected=signal<any|null>(null); readonly error=signal(''); readonly sent=signal(false); readonly busy=signal(false);
+  search='';filteredJobs(){const q=this.search.toLowerCase().trim();return this.jobs().filter(job=>`${job.title} ${job.area} ${job.level} ${job.municipality} ${job.department}`.toLowerCase().includes(q));}
   form:any={full_name:'',email:'',phone:'',department:'',municipality:'',education:'',salary_expectation:'',available_from:'',source:'',consent_process:false,consent_future:false,cv_name:'',cv_base64:'',answers:{}};
   questions():any[]{try{return JSON.parse(this.selected()?.questions_json||'[]');}catch{return [];}}
   async ngOnInit(){try{this.jobs.set(await this.api.request<any[]>('GET','/careers'));const id=Number(new URLSearchParams(location.search).get('id'));this.select(this.jobs().find(job=>job.id===id)||this.jobs()[0]||null);}catch(e){this.error.set(String(e));}}

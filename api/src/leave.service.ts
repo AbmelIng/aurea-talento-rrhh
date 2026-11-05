@@ -8,6 +8,17 @@ const validDate=(value:unknown):value is string=>typeof value==='string'&&/^\d{4
 @Injectable()
 export class LeaveService {
   constructor(private readonly db:DatabaseService) {}
+  async announcements(user:User):Promise<Row[]> {return this.db.all(`SELECT id,title,body,created_at,active FROM announcements ${hr(user)?'':'WHERE active=1'} ORDER BY id DESC LIMIT 30`);}
+  async addAnnouncement(user:User,title:unknown,body:unknown):Promise<Row[]> {
+    if(!hr(user)) throw new ForbiddenException('Solo RR. HH. publica avisos');
+    if(typeof title!=='string'||!title.trim()||title.length>140||typeof body!=='string'||!body.trim()||body.length>3000) throw new BadRequestException('Aviso inválido');
+    await this.db.run('INSERT INTO announcements (title,body,created_by,created_at) VALUES (?,?,?,?)',[title.trim(),body.trim(),user.id,new Date().toISOString()]);return this.announcements(user);
+  }
+  async setAnnouncementActive(user:User,id:number,active:boolean):Promise<Row[]> {
+    if(!hr(user)) throw new ForbiddenException('Solo RR. HH. administra avisos');
+    if(!(await this.db.get('SELECT id FROM announcements WHERE id=?',[id]))) throw new NotFoundException('Aviso no encontrado');
+    await this.db.run('UPDATE announcements SET active=? WHERE id=?',[active?1:0,id]);return this.announcements(user);
+  }
   async types():Promise<Row[]> { return this.db.all('SELECT * FROM leave_types ORDER BY name'); }
   async addType(user:User,name:string):Promise<Row[]> {
     if(!hr(user)) throw new ForbiddenException('Solo RR. HH. administra tipos de ausencia');

@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import mysql, { Pool, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { scryptSync, randomBytes } from 'node:crypto';
-import { mysqlMvpSchema, sqliteMvpSchema } from './mvp-schema';
+import { mysqlMvpSchema, sqliteMvpSchema, mysqlMvpExtras, sqliteMvpExtras } from './mvp-schema';
 
 export type Param = string | number | null;
 export type Row = Record<string, unknown>;
@@ -246,6 +246,10 @@ export class DatabaseService implements OnModuleDestroy {
         if(!(await this.hasColumn(table,column))) await this.executeDdl(`ALTER TABLE ${table} ADD COLUMN ${column} ${mysqlMode?'TEXT':'TEXT'}`);
       }
       await this.run('INSERT INTO schema_migrations (version,applied_at) VALUES (?,?)',[3,new Date().toISOString()]);
+    }
+    if (!(await this.get('SELECT version FROM schema_migrations WHERE version=4'))) {
+      for (const sql of mysqlMode ? mysqlMvpExtras : sqliteMvpExtras) await this.executeDdl(sql);
+      await this.run('INSERT INTO schema_migrations (version,applied_at) VALUES (?,?)',[4,new Date().toISOString()]);
     }
   }
 

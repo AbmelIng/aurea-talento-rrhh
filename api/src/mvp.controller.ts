@@ -24,6 +24,9 @@ export class MvpController {
   @Get('applications/:id/cv') applicationCv(@Req() req:AuthenticatedRequest,@Param('id') application:string){return this.recruitment.cv(req.user,id(application));}
 
   @Get('leave/types') leaveTypes(){return this.leave.types();}
+  @Get('leave/announcements') announcements(@Req() req:AuthenticatedRequest){return this.leave.announcements(req.user);}
+  @Post('leave/announcements') addAnnouncement(@Req() req:AuthenticatedRequest,@Body() body:{title?:string;body?:string}){return this.leave.addAnnouncement(req.user,body?.title,body?.body);}
+  @Patch('leave/announcements/:id') setAnnouncementActive(@Req() req:AuthenticatedRequest,@Param('id') announcement:string,@Body() body:{active?:boolean}){if(typeof body?.active!=='boolean')throw new BadRequestException('Estado inválido');return this.leave.setAnnouncementActive(req.user,id(announcement),body.active);}
   @Post('leave/types') addLeaveType(@Req() req:AuthenticatedRequest,@Body() body:{name?:string}){return this.leave.addType(req.user,body?.name||'');}
   @Get('leave/balances') balances(@Req() req:AuthenticatedRequest,@Query('employee') employee?:string){return this.leave.balance(req.user,employee?id(employee):undefined);}
   @Patch('leave/balances/:employee/:type') setBalance(@Req() req:AuthenticatedRequest,@Param('employee') employee:string,@Param('type') type:string,@Body() body:{hours?:number}){return this.leave.setBalance(req.user,id(employee),id(type),Number(body?.hours));}
@@ -35,6 +38,9 @@ export class MvpController {
   @Get('leave/out') out(@Req() req:AuthenticatedRequest){return this.leave.out(req.user);}
 
   @Get('records/benefits') benefitCatalog(){return this.records.benefitCatalog();}
+  @Get('records/company-documents') companyDocuments(@Req() req:AuthenticatedRequest){return this.records.companyDocuments(req.user);}
+  @Post('records/company-documents') uploadCompanyDocument(@Req() req:AuthenticatedRequest,@Body() body:Record<string,unknown>){return this.records.uploadCompanyDocument(req.user,body);}
+  @Get('records/company-documents/:id/file') companyFile(@Req() req:AuthenticatedRequest,@Param('id') document:string){return this.records.companyFile(req.user,id(document));}
   @Post('records/benefits') addBenefit(@Req() req:AuthenticatedRequest,@Body() body:Record<string,unknown>){return this.records.addBenefit(req.user,body);}
   @Get('records/employees/:id/benefits') employeeBenefits(@Req() req:AuthenticatedRequest,@Param('id') employee:string){return this.records.benefits(req.user,id(employee));}
   @Post('records/employees/:id/benefits') assignBenefit(@Req() req:AuthenticatedRequest,@Param('id') employee:string,@Body() body:Record<string,unknown>){return this.records.assignBenefit(req.user,id(employee),body);}
@@ -47,6 +53,10 @@ export class MvpController {
   @Post('records/employees/:id/trainings') assignTraining(@Req() req:AuthenticatedRequest,@Param('id') employee:string,@Body() body:Record<string,unknown>){return this.records.assignTraining(req.user,id(employee),body);}
   @Patch('records/trainings/:id/complete') completeTraining(@Req() req:AuthenticatedRequest,@Param('id') assignment:string){return this.records.completeTraining(req.user,id(assignment));}
   @Get('records/employees/:id/onboarding') onboarding(@Req() req:AuthenticatedRequest,@Param('id') employee:string){return this.records.onboarding(req.user,id(employee));}
+  @Get('records/employees/:id/onboarding-packet') packet(@Req() req:AuthenticatedRequest,@Param('id') employee:string){return this.records.packet(req.user,id(employee));}
+  @Post('records/employees/:id/onboarding-packet') sendPacket(@Req() req:AuthenticatedRequest,@Param('id') employee:string,@Body() body:{welcome_text?:string}){return this.records.sendPacket(req.user,id(employee),body?.welcome_text);}
+  @Patch('records/employees/:id/onboarding-packet/view') viewPacket(@Req() req:AuthenticatedRequest,@Param('id') employee:string){return this.records.viewPacket(req.user,id(employee));}
+  @Patch('records/employees/:id/onboarding-packet/cancel') cancelPacket(@Req() req:AuthenticatedRequest,@Param('id') employee:string){return this.records.cancelPacket(req.user,id(employee));}
   @Post('records/employees/:id/onboarding') addTask(@Req() req:AuthenticatedRequest,@Param('id') employee:string,@Body() body:Record<string,unknown>){return this.records.addTask(req.user,id(employee),body);}
   @Patch('records/onboarding/:id/complete') completeTask(@Req() req:AuthenticatedRequest,@Param('id') task:string){return this.records.completeTask(req.user,id(task));}
 }

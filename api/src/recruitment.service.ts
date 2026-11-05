@@ -77,8 +77,10 @@ export class RecruitmentService {
     const row=await this.vacancy(id);
     if(!['Borrador','Pendiente de aprobación','Aprobada','Abierta','En pausa'].includes(String(row.status))) throw new ConflictException('Vacante cerrada');
     const fields=['title','area','level','employment_type','municipality','department','modality','description','requirements','deadline'] as const;
-    const updates:Record<string,string>={};
+    const updates:Record<string,string|number>={};
     for(const field of fields) if(input[field]!==undefined) updates[field]=field==='deadline'?date(input[field],'Fecha límite'):text(input[field],field,field==='description'||field==='requirements'?10000:255);
+    if(input.openings!==undefined){const openings=Number(input.openings);if(!Number.isInteger(openings)||openings<1||openings>100)throw new BadRequestException('Número de plazas inválido');updates.openings=openings;}
+    if(input.is_new_position!==undefined)updates.is_new_position=input.is_new_position?1:0;
     if(!Object.keys(updates).length) throw new BadRequestException('Sin cambios');
     await this.db.run(`UPDATE vacancies SET ${Object.keys(updates).map(field=>`${field}=?`).join(',')},updated_at=?,approved_manager_at=NULL,approved_hr_at=NULL,approved_partner_at=NULL,status=? WHERE id=?`,[...Object.values(updates),now(),'Borrador',id]);
     return this.vacancy(id);

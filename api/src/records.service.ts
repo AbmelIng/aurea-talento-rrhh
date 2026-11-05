@@ -64,6 +64,27 @@ export class RecordsService {
     if(!hr(user)&&!doc.visible_to_employee) throw new ForbiddenException('Documento restringido');
     return {name:String(doc.file_name),data:(await readFile(resolve(directory(),String(doc.storage_name)))).toString('base64')};
   }
+  async companyDocuments(user:User):Promise<Row[]> {
+    const where=hr(user)?'':user.role==='MANAGER'?"WHERE audience IN ('all','managers')":"WHERE audience='all'";
+    return this.db.all(`SELECT id,category,title,file_name,audience,uploaded_at FROM company_documents ${where} ORDER BY category,title`);
+  }
+  async uploadCompanyDocument(user:User,input:Record<string,unknown>):Promise<Row[]> {
+    if(!hr(user)) throw new ForbiddenException('Solo RR. HH. sube archivos corporativos');
+    const filename=name(input.file_name,'Archivo',255),base64=name(input.base64,'Archivo',7_000_000);
+    const audience=name(input.audience,'Visibilidad',30);
+    if(!['all','managers','hr'].includes(audience)||!/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) throw new BadRequestException('Archivo o visibilidad inválidos');
+    const data=Buffer.from(base64,'base64');
+    if(data.length<100||data.length>5*1024*1024||!(/\.pdf$/i.test(filename)&&data.subarray(0,4).toString()==='%PDF'||/\.docx$/i.test(filename)&&data.subarray(0,2).toString()==='PK'||/\.doc$/i.test(filename)&&data.subarray(0,4).toString('hex')==='d0cf11e0')) throw new BadRequestException('PDF, DOC o DOCX de hasta 5 MB requerido');
+    const key=randomUUID();await mkdir(directory(),{recursive:true});await writeFile(resolve(directory(),key),data,{flag:'wx'});
+    try{await this.db.run('INSERT INTO company_documents (category,title,file_name,storage_name,audience,uploaded_by,uploaded_at) VALUES (?,?,?,?,?,?,?)',[name(input.category,'Categoría',80),name(input.title,'Título'),filename,key,audience,user.id,new Date().toISOString()]);}
+    catch(error){await unlink(resolve(directory(),key)).catch(()=>{});throw error;}
+    return this.companyDocuments(user);
+  }
+  async companyFile(user:User,id:number):Promise<{name:string;data:string}> {
+    const doc=await this.db.get<Row>('SELECT * FROM company_documents WHERE id=?',[id]);if(!doc) throw new NotFoundException('Archivo no encontrado');
+    if(doc.audience==='hr'&&!hr(user)||doc.audience==='managers'&&!hr(user)&&user.role!=='MANAGER') throw new ForbiddenException('Archivo restringido');
+    return {name:String(doc.file_name),data:(await readFile(resolve(directory(),String(doc.storage_name)))).toString('base64')};
+  }
   async trainingCatalog():Promise<Row[]> {return this.db.all('SELECT * FROM trainings ORDER BY title');}
   async addTraining(user:User,input:Record<string,unknown>):Promise<Row[]> {
     if(!hr(user)) throw new ForbiddenException('Solo RR. HH. administra capacitación');
@@ -88,6 +109,32 @@ export class RecordsService {
     return (await this.db.get<Row>('SELECT * FROM training_assignments WHERE id=?',[id]))!;
   }
   async onboarding(user:User,id:number):Promise<Row[]> { await this.employee(user,id); return this.db.all('SELECT * FROM onboarding_tasks WHERE employee_id=? ORDER BY id',[id]); }
+  async packet(user:User,id:number):Promise<Row|null> {
+    await this.employee(user,id);
+    const packet=await this.db.get<Row>('SELECT employee_id,welcome_text,status,sent_at,viewed_at,canceled_at FROM onboarding_packets WHERE employee_id=?',[id]);
+    return packet||null;
+  }
+  async sendPacket(user:User,id:number,welcomeText:unknown):Promise<Row|null> {
+    if(!hr(user)) throw new ForbiddenException('Solo RR. HH. envía paquetes de ingreso');await this.employee(user,id);
+    const content=name(welcomeText,'Mensaje de bienvenida',3000);
+    const existing=await this.db.get<Row>('SELECT status FROM onboarding_packets WHERE employee_id=?',[id]);
+    if(existing&&existing.status!=='Cancelado') throw new ConflictException('Ya se envió el paquete');
+    const timestamp=new Date().toISOString();
+    if(existing) await this.db.run('UPDATE onboarding_packets SET welcome_text=?,status=?,sent_by=?,sent_at=?,viewed_at=NULL,canceled_at=NULL WHERE employee_id=?',[content,'Enviado',user.id,timestamp,id]);
+    else await this.db.run('INSERT INTO onboarding_packets (employee_id,welcome_text,sent_by,sent_at) VALUES (?,?,?,?)',[id,content,user.id,timestamp]);
+    return this.packet(user,id);
+  }
+  async viewPacket(user:User,id:number):Promise<Row|null> {
+    if(user.employee_id!==id) throw new ForbiddenException('Solo el empleado confirma recepción');
+    const packet=await this.packet(user,id);if(!packet||packet.status==='Cancelado') throw new NotFoundException('Paquete no disponible');
+    if(!packet.viewed_at) await this.db.run('UPDATE onboarding_packets SET status=?,viewed_at=? WHERE employee_id=?',['Visto',new Date().toISOString(),id]);
+    return this.packet(user,id);
+  }
+  async cancelPacket(user:User,id:number):Promise<Row|null> {
+    if(!hr(user)) throw new ForbiddenException('Solo RR. HH. cancela paquetes');
+    if(!(await this.packet(user,id))) throw new NotFoundException('Paquete no encontrado');
+    await this.db.run('UPDATE onboarding_packets SET status=?,canceled_at=? WHERE employee_id=?',['Cancelado',new Date().toISOString(),id]);return this.packet(user,id);
+  }
   async addTask(user:User,id:number,input:Record<string,unknown>):Promise<Row[]> {
     if(!hr(user)) throw new ForbiddenException('Solo RR. HH. crea tareas de incorporación');await this.employee(user,id);
     const role=name(input.assignee_role,'Responsable',30);

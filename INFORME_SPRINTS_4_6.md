@@ -2,9 +2,9 @@
 
 ## Alcance implementado
 
-- **Sprint 4, reclutamiento inicial:** borradores de vacantes, envío y aprobación interna, publicación y pausa/cierre/reapertura; preguntas personalizadas de respuesta corta, sí/no y opción múltiple; página pública en español, enlace directo, postulación con CV y consentimiento; detección de correo duplicado por vacante; registro manual de canales; lectura restringida de candidatos y CV; avance por etapas iniciales y descarte motivado.
-- **Sprint 5, ausencias:** catálogo de tipos, saldos en horas, solicitudes, rechazo/aprobación por gerente o RR. HH., descuento y reintegro transaccional del saldo, lista de próximas ausencias del equipo.
-- **Sprint 6, expediente integral:** catálogo y asignación de beneficios; documentos por empleado con carga, visibilidad y descarga autorizada; catálogo, asignación y finalización de capacitaciones; tareas de incorporación por responsable.
+- **Sprint 4, reclutamiento inicial:** borradores y edición de vacantes, envío y aprobación interna, publicación y pausa/cierre/reapertura; preguntas personalizadas de respuesta corta, sí/no y opción múltiple; página pública en español con búsqueda y enlace directo, postulación con CV y consentimiento; detección de correo duplicado por vacante; registro manual de canales; lectura restringida de candidatos y CV; avance por etapas iniciales y descarte motivado.
+- **Sprint 5, ausencias:** catálogo de tipos, saldos en horas, solicitudes propias o registradas por RR. HH. en nombre del empleado, rechazo/aprobación por gerente o RR. HH., descuento y reintegro transaccional del saldo, lista de próximas ausencias del equipo y avisos corporativos.
+- **Sprint 6, expediente integral:** catálogo y asignación de beneficios; documentos por empleado con carga, búsqueda, visibilidad y descarga autorizada; biblioteca corporativa con audiencias; catálogo, asignación y finalización de capacitaciones; paquete de bienvenida con confirmación de lectura, tareas de incorporación y avance.
 - Se conserva el acceso, empleados, catálogos, historial y nómina manual de los sprints anteriores. No se introducen usuarios de prueba.
 
 ## Archivos
@@ -15,11 +15,11 @@
 
 ## Base de datos
 
-La migración 2 agrega tablas para vacantes, canales, postulaciones, ausencias, beneficios, documentos, capacitaciones e incorporación. La migración 3 agrega preguntas y respuestas a las postulaciones. Las tablas nuevas tienen claves foráneas hacia empleados y usuarios. Los archivos se guardan fuera de la base de datos, bajo `UPLOAD_DIR` (por defecto `api/data/uploads`). Se probaron las migraciones en SQLite con una instalación vacía. MySQL conserva su esquema equivalente pero no se ejecutó una prueba contra un servidor MySQL.
+La migración 2 agrega tablas para vacantes, canales, postulaciones, ausencias, beneficios, documentos, capacitaciones e incorporación. La migración 3 agrega preguntas y respuestas a las postulaciones. La migración 4 agrega avisos, paquetes de bienvenida y biblioteca corporativa. Las tablas nuevas tienen claves foráneas hacia empleados y usuarios. Los archivos se guardan fuera de la base de datos, bajo `UPLOAD_DIR` (por defecto `api/data/uploads`). Se probaron las migraciones en SQLite con una instalación vacía. MySQL conserva su esquema equivalente pero no se ejecutó una prueba contra un servidor MySQL.
 
 ## Verificación ejecutada
 
-- `api/npm test`: **2 pruebas de integración aprobadas**. Incluyen instalación vacía, usuarios y permisos, nómina previa, aprobación de vacante, pregunta obligatoria, postulación de CV de más de 100 KB, duplicado, saldo y aprobación de ausencia, beneficios, capacitación, incorporación y descarga autorizada.
+- `api/npm test`: **2 pruebas de integración aprobadas**. Incluyen instalación vacía, usuarios y permisos, nómina previa, aprobación de vacante, pregunta obligatoria, postulación de CV de más de 100 KB, duplicado, avisos, saldo y aprobación de ausencia, beneficios, capacitación, paquete de bienvenida, incorporación y descargas autorizadas.
 - `web/npm test -- --watch=false`: **2 pruebas aprobadas**.
 - `web/npm run build`: **compilación aprobada**.
 
