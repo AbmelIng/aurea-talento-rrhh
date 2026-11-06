@@ -7,13 +7,14 @@ import { RecruitmentComponent } from './recruitment.component';
 import { LeaveComponent } from './leave.component';
 import { RecordsComponent } from './records.component';
 import { SelectionComponent } from './selection.component';
+import { PayrollCalculationComponent } from './payroll-calculation.component';
 
-type Page = 'me' | 'people' | 'profile' | 'new' | 'settings' | 'requests' | 'time' | 'payments' | 'review' | 'payroll' | 'recruitment' | 'leave' | 'records' | 'selection';
+type Page = 'me' | 'people' | 'profile' | 'new' | 'settings' | 'requests' | 'time' | 'payments' | 'review' | 'payroll' | 'calculation' | 'recruitment' | 'leave' | 'records' | 'selection';
 type ProfileTab = 'personal' | 'job';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, CareersComponent, RecruitmentComponent, LeaveComponent, RecordsComponent, SelectionComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, CareersComponent, RecruitmentComponent, LeaveComponent, RecordsComponent, SelectionComponent, PayrollCalculationComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -126,6 +127,7 @@ export class App implements OnInit {
   async openSelection():Promise<void> { this.resetMessages(); this.page.set('selection'); if(this.api.user()?.role==='EMPLOYEE'){try{this.assignedInterviews.set(await this.api.request<any[]>('GET','/selection/my-interviews'));}catch(error){this.error.set(error instanceof Error?error.message:String(error));}} }
   openLeave():void { this.resetMessages(); this.page.set('leave'); }
   openRecords():void { this.resetMessages(); this.page.set('records'); }
+  openCalculation():void { this.resetMessages(); this.page.set('calculation'); }
 
   roleName(role?: string): string { return this.roleOptions.find(item => item.value === role)?.label || 'Empleado'; }
   catalogItems(category:string):CatalogOption[] { return this.formOptions()?.catalogs[category] || []; }

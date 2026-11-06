@@ -6,6 +6,7 @@ import mysql, { Pool, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { scryptSync, randomBytes } from 'node:crypto';
 import { mysqlMvpSchema, sqliteMvpSchema, mysqlMvpExtras, sqliteMvpExtras } from './mvp-schema';
 import { mysqlSelectionSchema, sqliteSelectionSchema } from './selection-schema';
+import { mysqlPayrollCalcSchema, sqlitePayrollCalcSchema } from './payroll-calc-schema';
 
 export type Param = string | number | null;
 export type Row = Record<string, unknown>;
@@ -255,6 +256,12 @@ export class DatabaseService implements OnModuleDestroy {
     if (!(await this.get('SELECT version FROM schema_migrations WHERE version=5'))) {
       for (const sql of mysqlMode ? mysqlSelectionSchema : sqliteSelectionSchema) await this.executeDdl(sql);
       await this.run('INSERT INTO schema_migrations (version,applied_at) VALUES (?,?)',[5,new Date().toISOString()]);
+    }
+    if (!(await this.get('SELECT version FROM schema_migrations WHERE version=6'))) {
+      if (!(await this.hasColumn('leave_types','pay_treatment')))
+        await this.executeDdl(`ALTER TABLE leave_types ADD COLUMN pay_treatment ${mysqlMode ? "VARCHAR(20) NOT NULL DEFAULT 'Pagada'" : "TEXT NOT NULL DEFAULT 'Pagada'"}`);
+      for (const sql of mysqlMode ? mysqlPayrollCalcSchema : sqlitePayrollCalcSchema) await this.executeDdl(sql);
+      await this.run('INSERT INTO schema_migrations (version,applied_at) VALUES (?,?)',[6,new Date().toISOString()]);
     }
   }
 

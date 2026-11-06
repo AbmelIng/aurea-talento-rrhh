@@ -37,6 +37,7 @@
         <button type="button" [class.active]="page() === 'records'" (click)="openRecords()">Expediente integral</button>
         @if (canReviewTime()) { <button type="button" [class.active]="page() === 'review'" (click)="openReview()">Revisión de horas</button> }
         @if (isPayroll()) { <button type="button" [class.active]="page() === 'payroll'" (click)="openPayroll()">Nómina</button> }
+        @if (isPayroll() || isAdmin()) { <button type="button" [class.active]="page() === 'calculation'" (click)="openCalculation()">Cálculo de nómina</button> }
         @if (canManage()) { <button type="button" [class.active]="page() === 'requests'" (click)="openRequests()">Solicitudes</button> }
         @if (canManageCatalogs()) { <button type="button" [class.active]="page() === 'settings'" (click)="openSettings()">{{ isAdmin() ? 'Configuración' : 'Catálogos' }}</button> }
       </nav>
@@ -45,6 +46,7 @@
   </header>
 
   <main class="workspace">
+    @if (page() === 'calculation') { <app-payroll-calculation /> }
     @if (page() === 'recruitment') { <app-recruitment /> }
     @if (page() === 'selection') { <section class="mvp-section"><h1>Selección avanzada</h1>@if (api.user()?.role === 'COMPLIANCE' || api.user()?.role === 'PARTNER') { <label>ID de candidatura <input type="number" min="1" [(ngModel)]="selectionApplicationId"></label> }@if(api.user()?.role === 'EMPLOYEE'){<div class="mvp-card"><h2>Mis entrevistas asignadas</h2>@for(i of assignedInterviews();track i.id){<button class="mvp-job" (click)="selectionApplicationId=i.application_id">{{i.full_name}} · {{i.title}} · {{i.scheduled_at}}</button>}@if(!assignedInterviews().length){<p>No hay entrevistas asignadas.</p>}</div>}<app-selection [applicationId]="selectionApplicationId" /></section> }
     @if (page() === 'leave') { <app-leave /> }
@@ -136,7 +138,7 @@
     }
 
     @if (page() === 'payroll' && isPayroll()) {
-      <div class="page-heading"><div><div class="eyebrow">OPERACIÓN</div><h1>Nómina</h1><p>Calendario y recibos manuales. Este módulo no calcula impuestos ni ejecuta pagos.</p></div></div>
+      <div class="page-heading"><div><div class="eyebrow">OPERACIÓN</div><h1>Nómina</h1><p>Calendario y captura manual de recibos. Para calcular todos los borradores con condiciones vigentes, abre «Cálculo de nómina». El sistema no calcula impuestos legalmente ni ejecuta pagos.</p></div></div>
       <section class="panel payroll-panel"><div class="panel-heading"><div><h2>Periodo seleccionado</h2><p>Las fechas y estados quedan registrados en la bitácora.</p></div><label class="filter-label">Periodo<select [ngModel]="selectedPeriodId" (ngModelChange)="selectPayrollPeriod($event)">@for (period of periods(); track period.id) { <option [ngValue]="period.id">{{ period.label }}</option> }</select></label></div>
         @if (currentPeriod(); as period) { <div class="payroll-stats"><div><small>Inicio</small><strong>{{ period.start_date | date:'dd/MM/yyyy' }}</strong></div><div><small>Fecha límite</small><strong>{{ period.submit_deadline | date:'dd/MM/yyyy' }}</strong></div><div><small>Pago previsto</small><strong>{{ period.pay_date | date:'dd/MM/yyyy' }}</strong></div></div><div class="row-actions"><label>Estado<select [(ngModel)]="periodStatus">@for (state of periodStatuses; track state) { <option>{{ state }}</option> }</select></label><button type="button" class="button secondary" (click)="changePeriodStatus()">Guardar estado</button></div> }
       </section>

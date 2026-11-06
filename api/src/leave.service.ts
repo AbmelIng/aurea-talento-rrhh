@@ -20,10 +20,18 @@ export class LeaveService {
     await this.db.run('UPDATE announcements SET active=? WHERE id=?',[active?1:0,id]);return this.announcements(user);
   }
   async types():Promise<Row[]> { return this.db.all('SELECT * FROM leave_types ORDER BY name'); }
-  async addType(user:User,name:string):Promise<Row[]> {
+  async addType(user:User,name:string,payTreatment='Pagada'):Promise<Row[]> {
     if(!hr(user)) throw new ForbiddenException('Solo RR. HH. administra tipos de ausencia');
     if(typeof name!=='string'||!name.trim()||name.length>100) throw new BadRequestException('Nombre inválido');
-    await this.db.run('INSERT INTO leave_types (name) VALUES (?)',[name.trim()]); return this.types();
+    if(!['Pagada','No pagada'].includes(payTreatment)) throw new BadRequestException('Tratamiento de pago inválido');
+    await this.db.run('INSERT INTO leave_types (name,pay_treatment) VALUES (?,?)',[name.trim(),payTreatment]); return this.types();
+  }
+  async setPayTreatment(user:User,typeId:number,payTreatment:string):Promise<Row[]> {
+    if(!hr(user)) throw new ForbiddenException('Solo RR. HH. administra tipos de ausencia');
+    if(!['Pagada','No pagada'].includes(payTreatment)) throw new BadRequestException('Tratamiento de pago inválido');
+    if(!(await this.db.get('SELECT id FROM leave_types WHERE id=?',[typeId]))) throw new NotFoundException('Tipo de ausencia no encontrado');
+    await this.db.run('UPDATE leave_types SET pay_treatment=? WHERE id=?',[payTreatment,typeId]);
+    return this.types();
   }
   async balance(user:User,employeeId?:number):Promise<Row[]> {
     const id=employeeId||user.employee_id;

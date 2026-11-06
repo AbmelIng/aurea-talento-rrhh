@@ -1,13 +1,13 @@
 # Aurea Talento — sistema de RR. HH.
 
-Aplicación Angular y NestJS con SQLite o MySQL. Esta copia separada conserva los sprints 1–6 e incorpora el trabajo del sprint 7 en selección avanzada. El tablero de Sprint Planning es otro proyecto. La copia anterior `aurea-talento-rrhh-sprint3` permanece disponible.
+Aplicación Angular y NestJS con SQLite o MySQL. Esta copia separada conserva los sprints 1–7 e incorpora condiciones de pago y cálculo masivo por período. La copia `aurea-talento-rrhh-sprint7` permanece disponible sin cambios. El tablero de Sprint Planning es otro proyecto.
 
 ## Instalación de desarrollo
 
 Requiere Node.js 24 y npm. La API no lee automáticamente archivos `.env`; define las variables en el entorno del proceso. En PowerShell:
 
 ```powershell
-cd "C:\Users\isaga\Documents\Codex\2026-10-16\n\aurea-talento-rrhh-sprint7\api"
+cd "C:\Users\isaga\Documents\Codex\2026-10-16\n\aurea-talento-rrhh-sprint8\api"
 npm ci
 $env:APP_SECRET = 'reemplace-por-una-clave-aleatoria-de-al-menos-32-caracteres'
 $env:BOOTSTRAP_EMAIL = 'administrador@suempresa.com'
@@ -24,7 +24,7 @@ El comando de inicialización muestra una contraseña aleatoria **una sola vez**
 En otra terminal:
 
 ```powershell
-cd "C:\Users\isaga\Documents\Codex\2026-10-16\n\aurea-talento-rrhh-sprint7\web"
+cd "C:\Users\isaga\Documents\Codex\2026-10-16\n\aurea-talento-rrhh-sprint8\web"
 npm ci
 npm start
 ```
@@ -49,11 +49,23 @@ Los archivos se almacenan en `api/data/uploads` por defecto. Usa `UPLOAD_DIR` pa
 
 **Pendiente para completar todas las historias del sprint 7:** invitaciones y recordatorios automáticos, conexión del buzón institucional, firma electrónica, archivo escaneado como adjunto y PDF de la oferta, revisión del rango salarial interno, reglas completas por tipo de verificación, retención/eliminación automática y solicitudes de eliminación, inserción de vacantes en el sitio institucional, integraciones con portales, cierre automático de plazas, transferencia completa a EP-05 y tratamiento automatizado de candidaturas restantes. No utilices datos de candidatos reales mientras estos controles estén incompletos y la revisión legal siga pendiente.
 
+### Cálculo de pagos por período en esta copia
+
+1. Desde **Nómina**, crea el período. En **Cálculo de nómina**, Nómina registra para cada persona un salario mensual, una tarifa por hora o una tarifa de servicios profesionales por hora. Cada condición tiene fecha inicial y final; para cambiarla se cierra la vigencia anterior y se crea otra. El sistema impide solapamientos y conserva las anteriores.
+2. Los empleados con pago por hora o servicios profesionales registran su hoja de tiempo; su gerente o Nómina la aprueba. RR. HH. crea los tipos de ausencia. Administración total puede establecer si cada tipo es **Pagada** o **No pagada**. Nómina registra bonos, ajustes positivos, deducciones e impuestos capturados externamente, con motivo.
+3. Nómina genera todos los borradores. Se calculan las personas activas con condición vigente que cubra todos los días del período. Si falta una condición o una hoja aprobada en un esquema por horas, la generación se detiene; no publica importes parciales. La vista previa desglosa horas, ausencias, base, bonos, ajustes, deducciones, bruto y neto.
+4. Nómina envía el conjunto a revisión. Una cuenta `ADMIN` distinta a la preparadora lo aprueba o lo devuelve. Tras la aprobación, Nómina publica todas las boletas de empleados en una transacción. Los honorarios profesionales quedan en el historial separado; no se convierten en boletas salariales. El período pasa a **Procesado**.
+5. El historial conserva las condiciones, ajustes, vista previa de cada período, actor y fecha de las decisiones, y las boletas publicadas. Cada empleado consulta sus propias boletas en **Mis pagos**.
+
+**Regla de cálculo utilizada:** el salario mensual se distribuye por día calendario según los días de cada mes incluido en el período. Un día de ausencia no pagada descuenta la proporción de horas de la jornada diaria; una ausencia pagada no la descuenta. Para la tarifa por hora se multiplican las horas aprobadas y las horas de ausencia pagada por la tarifa vigente de cada día. Para servicios profesionales se multiplican únicamente las horas aprobadas por su tarifa. Bonos y ajustes positivos aumentan el bruto; impuestos y deducciones capturados lo reducen. Las ausencias de varios días reparten sus horas uniformemente entre los días del rango.
+
+**Límites:** no hay cálculo legal automático de IGSS, ISR, prestaciones, horas extra ni facturación de servicios profesionales. La captura manual de boletas en períodos sin cálculo masivo sigue disponible y permite publicación directa. Antes de usar datos reales, valida las reglas laborales y tributarias, establece una política única de publicación, y prueba MySQL en el entorno objetivo.
+
 ## Base de datos y migración
 
 SQLite es el modo local predeterminado. Para MySQL 8.4, `compose.yaml` prepara un contenedor con volumen persistente. Define `MYSQL_PASSWORD` y `MYSQL_ROOT_PASSWORD` antes de `docker compose up -d`; después configura `DB_DRIVER=mysql`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` y `MYSQL_DATABASE` para la API. Véase `api/.env.example`. **El modo MySQL requiere una prueba de integración con un servidor MySQL disponible antes de usarlo con datos reales.**
 
-`api/src/database.ts` contiene migraciones versionadas. La versión 1 crea catálogos y códigos de empleado; la versión 2 incorpora las tablas de vacantes, candidaturas, ausencias, beneficios, documentos, capacitación e incorporación; la versión 3 agrega preguntas y respuestas de postulación; la versión 4 incorpora avisos, paquetes de bienvenida y biblioteca corporativa; la versión 5 incorpora entrevistas, evaluaciones, verificaciones, independencia, plantillas, ofertas, eventos y comunicaciones. Las instalaciones anteriores se migran al arrancar sin borrar datos. Haz una copia de la base antes de actualizar.
+`api/src/database.ts` contiene migraciones versionadas. Las versiones 1–5 conservan las funciones anteriores. La versión 6 añade tratamiento de pago de ausencias, condiciones con vigencia, ajustes, cálculos y detalles históricos. Las instalaciones anteriores se migran al arrancar sin borrar datos. Haz una copia de la base antes de actualizar.
 
 `api/data/` está excluido de la entrega mediante `.gitignore`. **No copies una base SQLite antigua con usuarios de demostración a una instalación nueva.** Para producción, usa una base vacía y ejecuta `bootstrap:admin` una sola vez. Los datos existentes no se eliminan automáticamente para evitar pérdida accidental.
 
@@ -67,9 +79,9 @@ SQLite es el modo local predeterminado. Para MySQL 8.4, `compose.yaml` prepara u
 
 ## Seguridad y alcance
 
-Las contraseñas se guardan con `scrypt`; las sesiones firmadas expiran a las ocho horas. Cambiar la contraseña revoca las sesiones anteriores. `ADMIN` puede delegar el permiso **MODIFICACIÓN Catálogos del sistema** sin ceder el rol de administrador. Los formularios cargan opciones del backend y este valida que pertenezcan a la categoría y estén activas. El código de empleado se reserva en una transacción y tiene restricción única. La nómina de este sprint registra importes manuales: **no calcula impuestos ni ejecuta pagos**.
+Las contraseñas se guardan con `scrypt`; las sesiones firmadas expiran a las ocho horas. Cambiar la contraseña revoca las sesiones anteriores. `ADMIN` puede delegar el permiso **MODIFICACIÓN Catálogos del sistema** sin ceder el rol de administrador. Los formularios cargan opciones del backend y este valida que pertenezcan a la categoría y estén activas. El código de empleado se reserva en una transacción y tiene restricción única. El cálculo nuevo usa condiciones y horas aprobadas, y exige aprobación antes de publicación; **no calcula impuestos legalmente ni ejecuta pagos bancarios**.
 
-Las reglas de festivos y horarios variables, correos automáticos, firma del paquete de bienvenida, firma electrónica de ofertas, cálculo de nómina, antivirus, conservación y eliminación automatizada de candidaturas y auditoría exhaustiva de accesos quedan pendientes. La ratificación de una plaza nueva en el flujo antiguo aún usa `ADMIN`; el flujo nuevo de ofertas distingue al socio. Antes de atender clientes reales también se requiere revisar seguridad de despliegue, recuperación de cuentas, gestión de secretos, respaldo y restauración, retención de datos personales y cumplimiento legal. El cambio de esquema se probó con SQLite; la ruta MySQL debe validarse en el entorno objetivo.
+Las reglas de festivos y horarios variables, correos automáticos, firma del paquete de bienvenida, firma electrónica de ofertas, cálculo tributario y de prestaciones, antivirus, conservación y eliminación automatizada de candidaturas y auditoría exhaustiva de accesos quedan pendientes. La ratificación de una plaza nueva en el flujo antiguo aún usa `ADMIN`; el flujo nuevo de ofertas distingue al socio. Antes de atender clientes reales también se requiere revisar seguridad de despliegue, recuperación de cuentas, gestión de secretos, respaldo y restauración, retención de datos personales y cumplimiento legal. El cambio de esquema se probó con SQLite; la ruta MySQL debe validarse en el entorno objetivo.
 
 ## Comprobación
 

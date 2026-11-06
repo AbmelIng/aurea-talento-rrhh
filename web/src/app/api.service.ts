@@ -30,6 +30,11 @@ export interface PayrollIssue { id: number; employee_id: number; period_id: numb
 export interface CatalogOption { id:number; category:string; name:string; active:number; }
 export interface FormOptions { catalogs:Record<string,CatalogOption[]>; statuses:string[]; roles:Role[]; requestFields:string[]; }
 export interface CodeConfig { id:number;prefix:string;separator:string;digits:number;next_number:number; }
+export interface PayCondition { id:number;employee_id:number;kind:'SALARIO_MENSUAL'|'TARIFA_HORA'|'SERVICIOS_PROFESIONALES';amount:number;daily_hours:number;effective_from:string;effective_to:string|null; }
+export interface PayAdjustment { id:number;employee_id:number;period_id:number;kind:string;amount:number;reason:string;first_name:string;last_name:string; }
+export interface PayrollRunItem { id:number;employee_id:number;code:string;first_name:string;last_name:string;kind:string;base_amount:number;approved_hours:number;paid_leave_hours:number;unpaid_leave_hours:number;bonuses:number;adjustments:number;deductions:number;gross:number;net:number;detail:{conditions:PayCondition[];adjustments:PayAdjustment[];manual_taxes:number;manual_deductions:number;professional_services:boolean}; }
+export interface PayrollRun { id:number;period_id:number;status:string;created_by:number;created_at:string;approved_by?:number;items:PayrollRunItem[]; }
+export interface PayrollRunHistory { id:number;period_id:number;status:string;label:string;start_date:string;end_date:string;people_count:number;employee_net:number;professional_fees:number;created_at:string;approved_at?:string;published_at?:string; }
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -107,4 +112,15 @@ export class ApiService {
   issues(): Promise<PayrollIssue[]> { return this.request('GET', '/payroll/issues'); }
   reportIssue(data: Record<string, unknown>): Promise<PayrollIssue> { return this.request('POST', '/payroll/issues', data); }
   resolveIssue(id: number, response: string): Promise<PayrollIssue> { return this.request('PATCH', `/payroll/issues/${id}`, { response }); }
+  payConditions(employeeId:number):Promise<PayCondition[]> { return this.request('GET',`/payroll/conditions/${employeeId}`); }
+  addPayCondition(data:Record<string,unknown>):Promise<PayCondition> { return this.request('POST','/payroll/conditions',data); }
+  closePayCondition(id:number,effective_to:string):Promise<PayCondition> { return this.request('PATCH',`/payroll/conditions/${id}/close`,{effective_to}); }
+  payAdjustments(periodId:number):Promise<PayAdjustment[]> { return this.request('GET',`/payroll/adjustments/${periodId}`); }
+  addPayAdjustment(data:Record<string,unknown>):Promise<PayAdjustment> { return this.request('POST','/payroll/adjustments',data); }
+  payrollRun(periodId:number):Promise<PayrollRun|null> { return this.request('GET',`/payroll/runs/${periodId}`); }
+  payrollRunHistory():Promise<PayrollRunHistory[]> { return this.request('GET','/payroll/runs'); }
+  generatePayrollRun(periodId:number):Promise<PayrollRun> { return this.request('POST',`/payroll/runs/${periodId}/generate`,{}); }
+  submitPayrollRun(periodId:number):Promise<PayrollRun> { return this.request('POST',`/payroll/runs/${periodId}/submit`,{}); }
+  approvePayrollRun(periodId:number,approve:boolean):Promise<PayrollRun> { return this.request('POST',`/payroll/runs/${periodId}/approve`,{approve}); }
+  publishPayrollRun(periodId:number):Promise<PayrollRun> { return this.request('POST',`/payroll/runs/${periodId}/publish`,{}); }
 }

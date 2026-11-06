@@ -6,6 +6,7 @@ import { AuthenticatedRequest, AuthService, Public, SessionGuard } from './auth'
 import { DatabaseService } from './database';
 import { PeopleService } from './people.service';
 import { PayrollService } from './payroll.service';
+import { PayrollCalculationService } from './payroll-calculation.service';
 import { SettingsService } from './settings.service';
 import { MvpController } from './mvp.controller';
 import { RecruitmentService } from './recruitment.service';
@@ -23,7 +24,7 @@ function idParam(value: string): number {
 
 @Controller('api')
 class ApiController {
-  constructor(private readonly auth: AuthService, private readonly people: PeopleService, private readonly payroll: PayrollService, private readonly settings:SettingsService) {}
+  constructor(private readonly auth: AuthService, private readonly people: PeopleService, private readonly payroll: PayrollService, private readonly settings:SettingsService, private readonly calculation:PayrollCalculationService) {}
 
   @Get('settings/form-options')
   formOptions(@Req() req:AuthenticatedRequest) { return this.settings.formOptions(req.user); }
@@ -180,11 +181,34 @@ class ApiController {
   resolveIssue(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() body: { response?: string }) {
     return this.payroll.resolveIssue(req.user, idParam(id), body?.response);
   }
+
+  @Get('payroll/conditions/:employeeId')
+  payConditions(@Req() req:AuthenticatedRequest,@Param('employeeId') employeeId:string) { return this.calculation.conditions(req.user,idParam(employeeId)); }
+  @Post('payroll/conditions')
+  addPayCondition(@Req() req:AuthenticatedRequest,@Body() body:Record<string,unknown>) { return this.calculation.addCondition(req.user,body); }
+  @Patch('payroll/conditions/:id/close')
+  closePayCondition(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Body() body:{effective_to?:string}) { return this.calculation.closeCondition(req.user,idParam(id),body.effective_to); }
+  @Get('payroll/adjustments/:periodId')
+  payAdjustments(@Req() req:AuthenticatedRequest,@Param('periodId') periodId:string) { return this.calculation.adjustments(req.user,idParam(periodId)); }
+  @Post('payroll/adjustments')
+  addPayAdjustment(@Req() req:AuthenticatedRequest,@Body() body:Record<string,unknown>) { return this.calculation.addAdjustment(req.user,body); }
+  @Get('payroll/runs')
+  payrollRunHistory(@Req() req:AuthenticatedRequest) { return this.calculation.history(req.user); }
+  @Get('payroll/runs/:periodId')
+  payrollRun(@Req() req:AuthenticatedRequest,@Param('periodId') periodId:string) { return this.calculation.run(req.user,idParam(periodId)); }
+  @Post('payroll/runs/:periodId/generate')
+  generatePayrollRun(@Req() req:AuthenticatedRequest,@Param('periodId') periodId:string) { return this.calculation.generate(req.user,idParam(periodId)); }
+  @Post('payroll/runs/:periodId/submit')
+  submitPayrollRun(@Req() req:AuthenticatedRequest,@Param('periodId') periodId:string) { return this.calculation.submit(req.user,idParam(periodId)); }
+  @Post('payroll/runs/:periodId/approve')
+  approvePayrollRun(@Req() req:AuthenticatedRequest,@Param('periodId') periodId:string,@Body() body:{approve?:boolean}) { return this.calculation.approve(req.user,idParam(periodId),body?.approve===true); }
+  @Post('payroll/runs/:periodId/publish')
+  publishPayrollRun(@Req() req:AuthenticatedRequest,@Param('periodId') periodId:string) { return this.calculation.publish(req.user,idParam(periodId)); }
 }
 
 @Module({
   controllers: [ApiController, MvpController, SelectionController],
-  providers: [DatabaseService, AuthService, PeopleService, PayrollService, SettingsService, RecruitmentService, LeaveService, RecordsService, SelectionService, { provide: APP_GUARD, useClass: SessionGuard }],
+  providers: [DatabaseService, AuthService, PeopleService, PayrollService, PayrollCalculationService, SettingsService, RecruitmentService, LeaveService, RecordsService, SelectionService, { provide: APP_GUARD, useClass: SessionGuard }],
 })
 class AppModule {}
 

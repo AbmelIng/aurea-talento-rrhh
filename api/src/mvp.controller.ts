@@ -29,7 +29,8 @@ export class MvpController {
   @Get('leave/announcements') announcements(@Req() req:AuthenticatedRequest){return this.leave.announcements(req.user);}
   @Post('leave/announcements') addAnnouncement(@Req() req:AuthenticatedRequest,@Body() body:{title?:string;body?:string}){return this.leave.addAnnouncement(req.user,body?.title,body?.body);}
   @Patch('leave/announcements/:id') setAnnouncementActive(@Req() req:AuthenticatedRequest,@Param('id') announcement:string,@Body() body:{active?:boolean}){if(typeof body?.active!=='boolean')throw new BadRequestException('Estado inválido');return this.leave.setAnnouncementActive(req.user,id(announcement),body.active);}
-  @Post('leave/types') addLeaveType(@Req() req:AuthenticatedRequest,@Body() body:{name?:string}){return this.leave.addType(req.user,body?.name||'');}
+  @Post('leave/types') addLeaveType(@Req() req:AuthenticatedRequest,@Body() body:{name?:string;pay_treatment?:string}){return this.leave.addType(req.user,body?.name||'',body?.pay_treatment||'Pagada');}
+  @Patch('leave/types/:id/pay-treatment') setLeavePayTreatment(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Body() body:{pay_treatment?:string}){return this.leave.setPayTreatment(req.user,Number(id),body?.pay_treatment||'');}
   @Get('leave/balances') balances(@Req() req:AuthenticatedRequest,@Query('employee') employee?:string){return this.leave.balance(req.user,employee?id(employee):undefined);}
   @Patch('leave/balances/:employee/:type') setBalance(@Req() req:AuthenticatedRequest,@Param('employee') employee:string,@Param('type') type:string,@Body() body:{hours?:number}){return this.leave.setBalance(req.user,id(employee),id(type),Number(body?.hours));}
   @Get('leave/requests') leaveRequests(@Req() req:AuthenticatedRequest,@Query('employee') employee?:string){return this.leave.list(req.user,employee?id(employee):undefined);}

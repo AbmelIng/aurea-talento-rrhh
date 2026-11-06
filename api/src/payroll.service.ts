@@ -62,6 +62,9 @@ export class PayrollService {
       if (key === 'status') {
         if (!statuses.includes(String(value))) throw new BadRequestException('Estado inválido');
         if (String(period.status) === 'Pagado' && value !== 'Pagado') throw new BadRequestException('Un periodo pagado no se reabre en esta versión');
+        const run = await this.db.get<Row>('SELECT status FROM payroll_runs WHERE period_id=?',[periodId]);
+        if(run && ['Procesado','Pagado'].includes(String(value)) && run.status!=='Publicado')
+          throw new BadRequestException('Primero publica el cálculo aprobado');
       } else if (key === 'label') {
         if (typeof value !== 'string' || !value.trim() || value.length > 100) throw new BadRequestException('Nombre inválido');
       } else if (!isoDate(value)) throw new BadRequestException('Fecha inválida');
@@ -175,6 +178,8 @@ export class PayrollService {
     this.payrollOnly(user);
     const periodId = id(input.period_id), employeeId = id(input.employee_id);
     const period = await this.period(periodId);
+    if(await this.db.get('SELECT id FROM payroll_runs WHERE period_id=?',[periodId]))
+      throw new BadRequestException('Este período usa cálculo masivo; edita las condiciones o ajustes y recalcula');
     if (period.status === 'Pagado') throw new BadRequestException('El periodo pagado no admite cambios');
     if (!(await this.db.get('SELECT id FROM employees WHERE id=?', [employeeId]))) throw new NotFoundException('Empleado no encontrado');
     const gross = money(input.gross, 'Bruto'), taxes = money(input.taxes, 'Impuestos'), deductions = money(input.deductions, 'Deducciones');
@@ -200,6 +205,8 @@ export class PayrollService {
   async publish(user: User, receiptId: number): Promise<Row> {
     this.payrollOnly(user);
     const row = await this.receipt(user, receiptId);
+    if(await this.db.get('SELECT id FROM payroll_runs WHERE period_id=?',[Number(row.period_id)]))
+      throw new BadRequestException('Este período usa cálculo masivo; publique el conjunto aprobado');
     if (row.status !== 'Borrador') throw new BadRequestException('El recibo ya está publicado');
     await this.db.run('UPDATE pay_records SET status=?,updated_at=?,updated_by=? WHERE id=?',
       ['Publicado', new Date().toISOString(), user.id, receiptId]);
