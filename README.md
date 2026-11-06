@@ -1,13 +1,13 @@
 # Aurea Talento — sistema de RR. HH.
 
-Aplicación Angular y NestJS con SQLite o MySQL. Esta copia conserva los sprints 1–3 e incorpora recorridos funcionales de los sprints 4–6: reclutamiento inicial, ausencias y expediente integral. El tablero de Sprint Planning es otro proyecto.
+Aplicación Angular y NestJS con SQLite o MySQL. Esta copia separada conserva los sprints 1–6 e incorpora el trabajo del sprint 7 en selección avanzada. El tablero de Sprint Planning es otro proyecto. La copia anterior `aurea-talento-rrhh-sprint3` permanece disponible.
 
 ## Instalación de desarrollo
 
 Requiere Node.js 24 y npm. La API no lee automáticamente archivos `.env`; define las variables en el entorno del proceso. En PowerShell:
 
 ```powershell
-cd "C:\Users\isaga\Documents\Codex\2026-10-16\n\aurea-talento-rrhh-sprint3\api"
+cd "C:\Users\isaga\Documents\Codex\2026-10-16\n\aurea-talento-rrhh-sprint7\api"
 npm ci
 $env:APP_SECRET = 'reemplace-por-una-clave-aleatoria-de-al-menos-32-caracteres'
 $env:BOOTSTRAP_EMAIL = 'administrador@suempresa.com'
@@ -24,7 +24,7 @@ El comando de inicialización muestra una contraseña aleatoria **una sola vez**
 En otra terminal:
 
 ```powershell
-cd "C:\Users\isaga\Documents\Codex\2026-10-16\n\aurea-talento-rrhh-sprint3\web"
+cd "C:\Users\isaga\Documents\Codex\2026-10-16\n\aurea-talento-rrhh-sprint7\web"
 npm ci
 npm start
 ```
@@ -39,11 +39,21 @@ Abre `http://localhost:4201`. La API escucha en `http://127.0.0.1:3001/api`. Des
 
 Los archivos se almacenan en `api/data/uploads` por defecto. Usa `UPLOAD_DIR` para indicar un directorio persistente fuera del repositorio. Se aceptan PDF, DOC y DOCX de hasta 5 MB. **Todavía no existe escaneo antivirus; no abras la página pública a candidatos reales hasta agregarlo y revisar la retención de datos.**
 
+### Sprint 7 · Selección avanzada
+
+1. RR. HH. abre una postulación y entra a **Selección avanzada**. Puede avanzar por las etapas, agendar entrevistas, registrar verificaciones y comunicaciones, y preparar versiones de oferta. El responsable de contratación registra su recomendación después de la entrevista del área. Los entrevistadores asignados ven sus entrevistas y pueden enviar una evaluación con la rúbrica correspondiente. Calificaciones de 1 o 2, o una recomendación de no contratar, exigen comentario.
+2. `ADMIN` asigna los roles **Legal**, **Cumplimiento** y **Socio** desde Configuración. Cumplimiento registra la declaración y el resultado de independencia después de la entrevista del área. El detalle de la declaración no se muestra al responsable de contratación. Sin revisión favorable no se puede crear la oferta.
+3. La **plantilla de carta de oferta** incorpora nombre, puesto, nivel, fecha de ingreso, jefe directo, salario base mensual en GTQ, bonificación incentivo, bono variable, tipo de contrato, beneficios, período de prueba y vencimiento. RR. HH. puede editarla; cada edición anula sus aprobaciones. La primera versión se genera al aprobarla por separado una cuenta de RR. HH. y una de Legal. La plantilla no se presenta como aprobada antes de registrar esas decisiones.
+4. Cada oferta conserva su carta y versión. El sistema exige aprobación del responsable y de RR. HH.; para Senior o Supervisor exige además un socio, y para Gerente dos socios distintos. RR. HH. registra el envío externo y la respuesta con evidencia. La fecha de vencimiento predeterminada son cinco días hábiles. El historial guarda cada cambio. El registro de comunicación es manual y no envía correos.
+5. RR. HH. puede consultar el banco de talento desde Reclutamiento. Solo aparecen candidaturas con autorización para futuras vacantes.
+
+**Pendiente para completar todas las historias del sprint 7:** invitaciones y recordatorios automáticos, conexión del buzón institucional, firma electrónica, archivo escaneado como adjunto y PDF de la oferta, revisión del rango salarial interno, reglas completas por tipo de verificación, retención/eliminación automática y solicitudes de eliminación, inserción de vacantes en el sitio institucional, integraciones con portales, reutilización de preguntas, cierre automático de plazas, transferencia completa a EP-05 y tratamiento automatizado de candidaturas restantes. No utilices datos de candidatos reales mientras estos controles estén incompletos y la revisión legal siga pendiente.
+
 ## Base de datos y migración
 
 SQLite es el modo local predeterminado. Para MySQL 8.4, `compose.yaml` prepara un contenedor con volumen persistente. Define `MYSQL_PASSWORD` y `MYSQL_ROOT_PASSWORD` antes de `docker compose up -d`; después configura `DB_DRIVER=mysql`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` y `MYSQL_DATABASE` para la API. Véase `api/.env.example`. **El modo MySQL requiere una prueba de integración con un servidor MySQL disponible antes de usarlo con datos reales.**
 
-`api/src/database.ts` contiene migraciones versionadas. La versión 1 crea catálogos y códigos de empleado; la versión 2 incorpora las tablas de vacantes, candidaturas, ausencias, beneficios, documentos, capacitación e incorporación; la versión 3 agrega preguntas y respuestas de postulación; la versión 4 incorpora avisos, paquetes de bienvenida y biblioteca corporativa. Las instalaciones anteriores se migran al arrancar sin borrar datos. Haz una copia de la base antes de actualizar.
+`api/src/database.ts` contiene migraciones versionadas. La versión 1 crea catálogos y códigos de empleado; la versión 2 incorpora las tablas de vacantes, candidaturas, ausencias, beneficios, documentos, capacitación e incorporación; la versión 3 agrega preguntas y respuestas de postulación; la versión 4 incorpora avisos, paquetes de bienvenida y biblioteca corporativa; la versión 5 incorpora entrevistas, evaluaciones, verificaciones, independencia, plantillas, ofertas, eventos y comunicaciones. Las instalaciones anteriores se migran al arrancar sin borrar datos. Haz una copia de la base antes de actualizar.
 
 `api/data/` está excluido de la entrega mediante `.gitignore`. **No copies una base SQLite antigua con usuarios de demostración a una instalación nueva.** Para producción, usa una base vacía y ejecuta `bootstrap:admin` una sola vez. Los datos existentes no se eliminan automáticamente para evitar pérdida accidental.
 
@@ -59,7 +69,7 @@ SQLite es el modo local predeterminado. Para MySQL 8.4, `compose.yaml` prepara u
 
 Las contraseñas se guardan con `scrypt`; las sesiones firmadas expiran a las ocho horas. Cambiar la contraseña revoca las sesiones anteriores. `ADMIN` puede delegar el permiso **MODIFICACIÓN Catálogos del sistema** sin ceder el rol de administrador. Los formularios cargan opciones del backend y este valida que pertenezcan a la categoría y estén activas. El código de empleado se reserva en una transacción y tiene restricción única. La nómina de este sprint registra importes manuales: **no calcula impuestos ni ejecuta pagos**.
 
-Las etapas avanzadas de selección (evaluación técnica, verificaciones, independencia, ofertas y firma), correos automáticos, banco de talento, reglas de festivos y horarios variables, invitaciones, firma del paquete de bienvenida, cálculo de nómina, antivirus, conservación y eliminación automatizada de candidaturas y auditoría exhaustiva de accesos quedan pendientes. La ratificación de una plaza nueva usa provisionalmente el rol `ADMIN`; antes de uso real debe separarse un rol de socio. Antes de atender clientes reales también se requiere revisar seguridad de despliegue, recuperación de cuentas, gestión de secretos, respaldo y restauración, retención de datos personales y cumplimiento legal. El cambio de esquema se probó con SQLite; la ruta MySQL debe validarse en el entorno objetivo.
+Las reglas de festivos y horarios variables, correos automáticos, firma del paquete de bienvenida, firma electrónica de ofertas, cálculo de nómina, antivirus, conservación y eliminación automatizada de candidaturas y auditoría exhaustiva de accesos quedan pendientes. La ratificación de una plaza nueva en el flujo antiguo aún usa `ADMIN`; el flujo nuevo de ofertas distingue al socio. Antes de atender clientes reales también se requiere revisar seguridad de despliegue, recuperación de cuentas, gestión de secretos, respaldo y restauración, retención de datos personales y cumplimiento legal. El cambio de esquema se probó con SQLite; la ruta MySQL debe validarse en el entorno objetivo.
 
 ## Comprobación
 

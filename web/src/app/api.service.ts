@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
-export type Role = 'EMPLOYEE' | 'MANAGER' | 'HR_ADMIN' | 'ADMIN' | 'PAYROLL';
+export type Role = 'EMPLOYEE' | 'MANAGER' | 'HR_ADMIN' | 'ADMIN' | 'PAYROLL' | 'PARTNER' | 'LEGAL' | 'COMPLIANCE';
 export interface User { id: number; employee_id: number; email: string; role: Role; can_modify_catalogs:number; last_login?: string; }
 export interface Employee {
   id: number; code: string; first_name: string; last_name: string; preferred_name?: string | null;

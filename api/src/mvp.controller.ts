@@ -3,12 +3,13 @@ import { AuthenticatedRequest, Public } from './auth';
 import { RecruitmentService } from './recruitment.service';
 import { LeaveService } from './leave.service';
 import { RecordsService } from './records.service';
+import { SelectionService } from './selection.service';
 
 const id=(raw:string)=>{const value=Number(raw);if(!Number.isInteger(value)||value<1)throw new BadRequestException('Identificador inválido');return value;};
 
 @Controller('api')
 export class MvpController {
-  constructor(private readonly recruitment:RecruitmentService,private readonly leave:LeaveService,private readonly records:RecordsService) {}
+  constructor(private readonly recruitment:RecruitmentService,private readonly leave:LeaveService,private readonly records:RecordsService,private readonly selection:SelectionService) {}
   @Public() @Get('careers') careers(){return this.recruitment.publicList();}
   @Public() @Get('careers/:id') career(@Param('id') vacancy:string){return this.recruitment.publicOne(id(vacancy));}
   @Public() @Post('careers/:id/apply') apply(@Param('id') vacancy:string,@Body() body:Record<string,unknown>){return this.recruitment.apply(id(vacancy),body);}
@@ -20,7 +21,7 @@ export class MvpController {
   @Get('vacancies/:id/channels') channels(@Req() req:AuthenticatedRequest,@Param('id') vacancy:string){return this.recruitment.channels(req.user,id(vacancy));}
   @Post('vacancies/:id/channels') addChannel(@Req() req:AuthenticatedRequest,@Param('id') vacancy:string,@Body() body:Record<string,unknown>){return this.recruitment.addChannel(req.user,id(vacancy),body);}
   @Get('vacancies/:id/applications') applications(@Req() req:AuthenticatedRequest,@Param('id') vacancy:string){return this.recruitment.applications(req.user,id(vacancy));}
-  @Patch('applications/:id/stage') applicationStage(@Req() req:AuthenticatedRequest,@Param('id') application:string,@Body() body:{stage?:string;reason?:string}){return this.recruitment.advance(req.user,id(application),body?.stage||'',body?.reason);}
+  @Patch('applications/:id/stage') applicationStage(@Req() req:AuthenticatedRequest,@Param('id') application:string,@Body() body:{stage?:string;reason?:string}){return this.selection.stage(req.user,id(application),body?.stage||'',body?.reason);}
   @Get('applications/:id/cv') applicationCv(@Req() req:AuthenticatedRequest,@Param('id') application:string){return this.recruitment.cv(req.user,id(application));}
 
   @Get('leave/types') leaveTypes(){return this.leave.types();}

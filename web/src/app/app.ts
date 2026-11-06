@@ -6,13 +6,14 @@ import { CareersComponent } from './careers.component';
 import { RecruitmentComponent } from './recruitment.component';
 import { LeaveComponent } from './leave.component';
 import { RecordsComponent } from './records.component';
+import { SelectionComponent } from './selection.component';
 
-type Page = 'me' | 'people' | 'profile' | 'new' | 'settings' | 'requests' | 'time' | 'payments' | 'review' | 'payroll' | 'recruitment' | 'leave' | 'records';
+type Page = 'me' | 'people' | 'profile' | 'new' | 'settings' | 'requests' | 'time' | 'payments' | 'review' | 'payroll' | 'recruitment' | 'leave' | 'records' | 'selection';
 type ProfileTab = 'personal' | 'job';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, CareersComponent, RecruitmentComponent, LeaveComponent, RecordsComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, CareersComponent, RecruitmentComponent, LeaveComponent, RecordsComponent, SelectionComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -58,6 +59,9 @@ export class App implements OnInit {
   readonly isAdmin = computed(() => this.api.user()?.role === 'ADMIN');
   readonly canManageCatalogs = computed(() => this.isAdmin() || !!this.api.user()?.can_modify_catalogs);
   readonly isPayroll = computed(() => this.api.user()?.role === 'PAYROLL');
+  readonly isSelectionSpecialist = computed(() => ['EMPLOYEE','LEGAL','COMPLIANCE','PARTNER'].includes(this.api.user()?.role||''));
+  selectionApplicationId=0;
+  readonly assignedInterviews=signal<any[]>([]);
   readonly canReviewTime = computed(() => ['MANAGER', 'PAYROLL'].includes(this.api.user()?.role || ''));
   readonly isOwnProfile = computed(() => this.profile()?.id === this.api.user()?.employee_id);
   search = '';
@@ -76,6 +80,7 @@ export class App implements OnInit {
     { value: 'EMPLOYEE', label: 'Empleado' }, { value: 'MANAGER', label: 'Gerente' },
     { value: 'HR_ADMIN', label: 'RR. HH.' }, { value: 'ADMIN', label: 'Administrador total' },
     { value: 'PAYROLL', label: 'Nómina' },
+    { value: 'PARTNER', label: 'Socio' }, { value: 'LEGAL', label: 'Legal' }, { value: 'COMPLIANCE', label: 'Cumplimiento' },
   ];
   readonly requestFieldLabels = [
     { value: 'first_name', label: 'Primer nombre' }, { value: 'last_name', label: 'Apellido' },
@@ -118,6 +123,7 @@ export class App implements OnInit {
     if (await this.api.restore()) await this.loadMe();
   }
   openRecruitment():void { this.resetMessages(); this.page.set('recruitment'); }
+  async openSelection():Promise<void> { this.resetMessages(); this.page.set('selection'); if(this.api.user()?.role==='EMPLOYEE'){try{this.assignedInterviews.set(await this.api.request<any[]>('GET','/selection/my-interviews'));}catch(error){this.error.set(error instanceof Error?error.message:String(error));}} }
   openLeave():void { this.resetMessages(); this.page.set('leave'); }
   openRecords():void { this.resetMessages(); this.page.set('records'); }
 

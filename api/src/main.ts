@@ -11,6 +11,8 @@ import { MvpController } from './mvp.controller';
 import { RecruitmentService } from './recruitment.service';
 import { LeaveService } from './leave.service';
 import { RecordsService } from './records.service';
+import { SelectionService } from './selection.service';
+import { SelectionController } from './selection.controller';
 import { json } from 'express';
 
 function idParam(value: string): number {
@@ -181,8 +183,8 @@ class ApiController {
 }
 
 @Module({
-  controllers: [ApiController, MvpController],
-  providers: [DatabaseService, AuthService, PeopleService, PayrollService, SettingsService, RecruitmentService, LeaveService, RecordsService, { provide: APP_GUARD, useClass: SessionGuard }],
+  controllers: [ApiController, MvpController, SelectionController],
+  providers: [DatabaseService, AuthService, PeopleService, PayrollService, SettingsService, RecruitmentService, LeaveService, RecordsService, SelectionService, { provide: APP_GUARD, useClass: SessionGuard }],
 })
 class AppModule {}
 

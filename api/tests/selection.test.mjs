@@ -1,0 +1,62 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+test('sprint 7: plantilla aprobada por RR. HH. y Legal, independencia y oferta versionada',async()=>{
+  const dir=mkdtempSync(join(tmpdir(),'aurea-selection-'));
+  const port=35000+Math.floor(Math.random()*20000),base=`http://127.0.0.1:${port}/api`;
+  const env={...process.env,PORT:String(port),SQLITE_FILE:join(dir,'test.sqlite'),UPLOAD_DIR:join(dir,'uploads'),APP_SECRET:'selection-test-secret-at-least-32-characters',BOOTSTRAP_EMAIL:'admin@firma.example',BOOTSTRAP_FIRST_NAME:'Ada',BOOTSTRAP_LAST_NAME:'Admin'};
+  const req=async(path,method='GET',token='',body)=>{const response=await fetch(base+path,{method,headers:{...(token?{Authorization:`Bearer ${token}`}:{}) ,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});return {status:response.status,data:await response.json()};};
+  let server;
+  try{
+    const init=spawnSync(process.execPath,['dist/bootstrap-admin.js'],{cwd:process.cwd(),env,encoding:'utf8'});assert.equal(init.status,0,init.stderr);
+    const password=/Contraseña inicial \(guardar ahora\): (\S+)/.exec(init.stdout)?.[1];assert.ok(password);
+    server=spawn(process.execPath,['dist/main.js'],{cwd:process.cwd(),env,stdio:'ignore'});
+    let ready=false;for(let i=0;i<100;i++){try{await fetch(base+'/careers');ready=true;break;}catch{await new Promise(r=>setTimeout(r,100));}}assert.ok(ready);
+    const admin=(await req('/auth/login','POST','',{email:'admin@firma.example',password})).data.token;
+    const categories=['job_title','area','service_line','office','employment_type'];const values=['Auditor','Auditoría','Auditoría financiera','Guatemala','Tiempo completo'];const ids={};
+    for(let i=0;i<categories.length;i++){const r=await req(`/settings/catalogs/${categories[i]}`,'POST',admin,{name:values[i]});ids[`${categories[i]}_id`]=r.data.id;}
+    const create=async(name,email,role)=>{const result=await req('/employees','POST',admin,{first_name:name,last_name:'Prueba',work_email:email,hire_date:'2026-11-01',...ids});assert.equal(result.status,201,JSON.stringify(result.data));await req(`/employees/${result.data.employee.id}/role`,'PATCH',admin,{role});return (await req('/auth/login','POST','',{email,password:result.data.temporaryPassword})).data.token;};
+    const manager=await create('Gerente','gerente@firma.example','MANAGER');
+    const legal=await create('Legal','legal@firma.example','LEGAL');
+    const compliance=await create('Cumplimiento','cumplimiento@firma.example','COMPLIANCE');
+    const worker=await create('Empleado','empleado@firma.example','EMPLOYEE');
+    const managerId=(await req('/auth/me','GET',manager)).data.employee_id;
+    const vacancy=await req('/vacancies','POST',admin,{title:'Auditor junior',area:'Auditoría',level:'Auditor junior',employment_type:'Tiempo completo',municipality:'Guatemala',department:'Guatemala',modality:'Presencial',description:'Auditoría financiera',requirements:'Contabilidad',deadline:'2026-12-20',openings:1,hiring_manager_id:managerId,is_new_position:false});assert.equal(vacancy.status,201);
+    const v=vacancy.data.id;await req(`/vacancies/${v}/actions/submit`,'POST',admin,{});await req(`/vacancies/${v}/actions/approve-manager`,'POST',manager,{});await req(`/vacancies/${v}/actions/approve-hr`,'POST',admin,{});await req(`/vacancies/${v}/actions/publish`,'POST',admin,{});
+    const cv=Buffer.from('%PDF-1.4\n'+'x'.repeat(1000)).toString('base64');
+    const application=await req(`/careers/${v}/apply`,'POST','',{full_name:'Candidata Prueba',email:'candidata@example.com',phone:'55555555',municipality:'Guatemala',department:'Guatemala',education:'Licenciatura',salary_expectation:'GTQ 5000',available_from:'2026-12-01',source:'LinkedIn',cv_name:'cv.pdf',cv_base64:cv,consent_process:true});assert.equal(application.status,201,JSON.stringify(application.data));
+    const appId=(await req(`/vacancies/${v}/applications`,'GET',admin)).data[0].id;
+    assert.equal((await req(`/selection/applications/${appId}`,'GET',worker)).status,403);
+    assert.equal((await req('/selection/talent-pool','GET',admin)).data.length,0);
+    assert.equal((await req('/selection/offer-template','GET',admin)).data.hr_approved_by,null);
+    assert.equal((await req('/selection/offer-template/approve','POST',admin,{})).status,201);
+    assert.equal((await req('/selection/offer-template','GET',admin)).data.legal_approved_by,null);
+    assert.equal((await req('/selection/offer-template/approve','POST',legal,{})).status,201);
+    assert.ok((await req('/selection/offer-template','GET',admin)).data.legal_approved_by);
+    for(const stage of ['Revisión de CV','Preselección','Entrevista con RR. HH.','Evaluación técnica','Entrevista con el área'])assert.equal((await req(`/selection/applications/${appId}/stage`,'PATCH',admin,{stage})).status,200);
+    const interviewerId=(await req('/auth/me','GET',worker)).data.id;
+    assert.equal((await req(`/selection/applications/${appId}/interviews`,'POST',admin,{scheduled_at:'2026-12-02T10:00:00',mode:'Virtual',place:'Sala privada',interviewer_id:interviewerId})).status,201);
+    assert.equal((await req('/selection/my-interviews','GET',worker)).data.length,1);
+    const limited=(await req(`/selection/applications/${appId}`,'GET',worker)).data;
+    assert.equal(limited.offers.length,0);assert.equal(limited.checks.length,0);assert.equal(limited.events.length,0);
+    assert.equal((await req(`/selection/applications/${appId}/evaluations`,'POST',manager,{scores:{'Auditoría y contabilidad (NIIF/NIA)':2,'Análisis':3,'Comunicación':3,'Inglés':3,'Criterio profesional':3,'Ética':4},recommendation:'Contratar',comment:''})).status,400);
+    assert.equal((await req(`/selection/applications/${appId}/evaluations`,'POST',manager,{scores:{'Auditoría y contabilidad (NIIF/NIA)':2,'Análisis':3,'Comunicación':3,'Inglés':3,'Criterio profesional':3,'Ética':4},recommendation:'Contratar',comment:'Reforzar normas.'})).status,201);
+    assert.equal((await req(`/selection/applications/${appId}/recommend`,'POST',manager,{note:'Recomiendo continuar'})).status,201);
+    assert.equal((await req(`/selection/applications/${appId}/stage`,'PATCH',admin,{stage:'Verificaciones'})).status,200);
+    assert.equal((await req(`/selection/applications/${appId}/checks`,'POST',admin,{kind:'Antecedentes',status:'Completada',result:'Apto'})).status,400);
+    assert.equal((await req(`/selection/applications/${appId}/checks`,'POST',admin,{kind:'Antecedentes',status:'Completada',result:'Apto',written_authorization:true})).status,201);
+    const terms={fecha_ingreso:'2027-01-04',jefe_directo:'Gerente Prueba',tipo_contrato:'Indefinido',salario:5000,bonificacion_incentivo:250,bono_variable:0,beneficios:'Seguro médico',periodo_prueba:'Dos meses'};
+    assert.equal((await req(`/selection/applications/${appId}/offers`,'POST',admin,terms)).status,409);
+    assert.equal((await req(`/selection/applications/${appId}/independence`,'POST',compliance,{declaration:'Sin intereses en clientes',result:'Sin conflicto'})).status,201);
+    const prepared=await req(`/selection/applications/${appId}/offers`,'POST',admin,terms);assert.equal(prepared.status,201,JSON.stringify(prepared.data));const offer=prepared.data.offers[0];assert.match(offer.letter,/Candidata Prueba/);assert.match(offer.letter,/GTQ 5000.00/);assert.match(offer.letter,/Gerente Prueba/);
+    assert.equal((await req(`/selection/offers/${offer.id}/send`,'POST',admin,{})).status,409);
+    assert.equal((await req(`/selection/offers/${offer.id}/approve`,'POST',manager,{})).status,201);
+    assert.equal((await req(`/selection/offers/${offer.id}/approve`,'POST',admin,{})).status,201);
+    assert.equal((await req(`/selection/offers/${offer.id}/send`,'POST',admin,{})).status,201);
+    assert.equal((await req(`/selection/offers/${offer.id}/respond`,'POST',admin,{status:'Aceptada',evidence:'Carta firmada recibida'})).status,201);
+  }finally{if(server?.exitCode===null){server.kill();await new Promise(resolve=>server.once('exit',resolve));}rmSync(dir,{recursive:true,force:true});}
+});

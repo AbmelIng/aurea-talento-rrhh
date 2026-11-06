@@ -9,7 +9,7 @@ const approvalFields: readonly string[] = requestFields;
 const catalogFields = ['job_title', 'area', 'service_line', 'office', 'employment_type'] as const;
 const jobFields: readonly string[] = [...catalogFields.map(field=>`${field}_id`), 'status', 'manager_id', 'hire_date'];
 const labels: Record<string, string> = {
-  EMPLOYEE: 'Empleado', MANAGER: 'Gerente', HR_ADMIN: 'RR. HH.', ADMIN: 'Administrador total', PAYROLL: 'Nómina',
+  EMPLOYEE: 'Empleado', MANAGER: 'Gerente', HR_ADMIN: 'RR. HH.', ADMIN: 'Administrador total', PAYROLL: 'Nómina', PARTNER: 'Socio', LEGAL: 'Legal', COMPLIANCE: 'Cumplimiento',
 };
 
 function stringValue(value: unknown, label: string, max = 190): string {

@@ -5,7 +5,7 @@ import { User } from './auth';
 export const catalogCategories = ['job_title','area','service_line','office','employment_type'] as const;
 export type CatalogCategory = typeof catalogCategories[number];
 export const employmentStatuses = ['Activo','Inactivo','Suspendido'] as const;
-export const accessRoles = ['EMPLOYEE','MANAGER','HR_ADMIN','ADMIN','PAYROLL'] as const;
+export const accessRoles = ['EMPLOYEE','MANAGER','HR_ADMIN','ADMIN','PAYROLL','PARTNER','LEGAL','COMPLIANCE'] as const;
 export const requestFields = ['first_name','last_name','birth_date','dpi','nit','igss'] as const;
 
 @Injectable()

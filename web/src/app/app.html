@@ -32,6 +32,7 @@
         <button type="button" [class.active]="page() === 'time'" (click)="openTime()">Mi tiempo</button>
         <button type="button" [class.active]="page() === 'payments'" (click)="openPayments()">Mis pagos</button>
         @if (canSeePeople()) { <button type="button" [class.active]="page() === 'recruitment'" (click)="openRecruitment()">Reclutamiento</button> }
+        @if (isSelectionSpecialist()) { <button type="button" [class.active]="page() === 'selection'" (click)="openSelection()">Selección avanzada</button> }
         <button type="button" [class.active]="page() === 'leave'" (click)="openLeave()">Ausencias</button>
         <button type="button" [class.active]="page() === 'records'" (click)="openRecords()">Expediente integral</button>
         @if (canReviewTime()) { <button type="button" [class.active]="page() === 'review'" (click)="openReview()">Revisión de horas</button> }
@@ -45,6 +46,7 @@
 
   <main class="workspace">
     @if (page() === 'recruitment') { <app-recruitment /> }
+    @if (page() === 'selection') { <section class="mvp-section"><h1>Selección avanzada</h1>@if (api.user()?.role === 'COMPLIANCE' || api.user()?.role === 'PARTNER') { <label>ID de candidatura <input type="number" min="1" [(ngModel)]="selectionApplicationId"></label> }@if(api.user()?.role === 'EMPLOYEE'){<div class="mvp-card"><h2>Mis entrevistas asignadas</h2>@for(i of assignedInterviews();track i.id){<button class="mvp-job" (click)="selectionApplicationId=i.application_id">{{i.full_name}} · {{i.title}} · {{i.scheduled_at}}</button>}@if(!assignedInterviews().length){<p>No hay entrevistas asignadas.</p>}</div>}<app-selection [applicationId]="selectionApplicationId" /></section> }
     @if (page() === 'leave') { <app-leave /> }
     @if (page() === 'records') { <app-records /> }
     @if (loading()) { <div class="progress" aria-label="Cargando"></div> }
