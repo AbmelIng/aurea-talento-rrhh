@@ -50,6 +50,7 @@ import { ApiService, AuditClient, Employee, Engagement } from './api.service';
           <label>Instrucciones de llegada o contacto<textarea [(ngModel)]="assignmentForm.arrival_instructions"></textarea></label>
         </div><button (click)="assign()" [disabled]="busy()">Guardar asignación</button></div>
       }
+      @if (upcoming().length) {<div class="panel"><h2>Próximas visitas</h2><div class="cards">@for(e of upcoming();track e.id){<button class="card" (click)="show(e.id)"><strong>{{e.my_start_date}} – {{e.my_end_date}}</strong><span>{{e.client_name}} · {{e.name}}</span><small>{{e.address || e.location}}</small></button>}</div></div>}
       <div class="panel"><h2>Encargos disponibles</h2>
         <div class="cards">@for(e of engagements();track e.id){<button class="card" (click)="show(e.id)"><strong>{{e.client_name}}</strong><span>{{e.name}}</span><small>{{e.start_date}} – {{e.end_date}} · {{e.status}}</small></button>} @empty {<p>Aún no tienes engagements asignados.</p>}</div>
       </div>
@@ -78,6 +79,7 @@ export class EngagementsComponent implements OnInit {
   clientForm = this.blankClient(); engagementForm = this.blankEngagement(); assignmentForm = this.blankAssignment();
   canManage() { return ['ADMIN','HR_ADMIN'].includes(this.api.user()?.role || ''); }
   activeClients() { return this.clients().filter(c => c.active || c.id === this.engagementForm.client_id); }
+  upcoming() { const today=new Date().toISOString().slice(0,10);return this.engagements().filter(e=>e.my_start_date&&e.my_end_date&&e.my_end_date>=today&&e.status!=='Cerrado').sort((a,b)=>a.my_start_date!.localeCompare(b.my_start_date!)); }
   async ngOnInit() { await this.reload(); }
   private blankClient() { return {code:'',name:'',tax_id:'',address:'',offices:'',contact_name:'',phone:'',email:'',active:1}; }
   private blankEngagement() { return {client_id:0,name:'',audit_type:'',fiscal_period:'',start_date:'',end_date:'',location:'',partner_id:0,manager_id:0,status:'Planificación'}; }
