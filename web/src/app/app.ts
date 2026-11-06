@@ -8,13 +8,14 @@ import { LeaveComponent } from './leave.component';
 import { RecordsComponent } from './records.component';
 import { SelectionComponent } from './selection.component';
 import { PayrollCalculationComponent } from './payroll-calculation.component';
+import { EngagementsComponent } from './engagements.component';
 
-type Page = 'me' | 'people' | 'profile' | 'new' | 'settings' | 'requests' | 'time' | 'payments' | 'review' | 'payroll' | 'calculation' | 'recruitment' | 'leave' | 'records' | 'selection';
+type Page = 'me' | 'people' | 'profile' | 'new' | 'settings' | 'requests' | 'time' | 'payments' | 'review' | 'payroll' | 'calculation' | 'engagements' | 'recruitment' | 'leave' | 'records' | 'selection';
 type ProfileTab = 'personal' | 'job';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, CareersComponent, RecruitmentComponent, LeaveComponent, RecordsComponent, SelectionComponent, PayrollCalculationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, CareersComponent, RecruitmentComponent, LeaveComponent, RecordsComponent, SelectionComponent, PayrollCalculationComponent, EngagementsComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -36,6 +37,7 @@ export class App implements OnInit {
   readonly audit = signal<AuditEntry[]>([]);
   readonly periods = signal<PayrollPeriod[]>([]);
   readonly timesheet = signal<Timesheet | null>(null);
+  readonly myEngagements = signal<import('./api.service').Engagement[]>([]);
   readonly reviewSheets = signal<ReviewSheet[]>([]);
   readonly receipts = signal<PayReceipt[]>([]);
   readonly selectedReceipt = signal<PayReceipt | null>(null);
@@ -114,7 +116,7 @@ export class App implements OnInit {
     job_title_id: [0, Validators.min(1)], area_id: [0, Validators.min(1)], service_line_id: [0, Validators.min(1)],
     office_id: [0, Validators.min(1)], employment_type_id: [0, Validators.min(1)], status: ['Activo'], manager_id: [0],
   });
-  readonly timeForm = this.fb.nonNullable.group({ work_date: ['', Validators.required], hours: [8, [Validators.required, Validators.min(0.25), Validators.max(24)]], note: [''] });
+  readonly timeForm = this.fb.nonNullable.group({ work_date: ['', Validators.required], hours: [8, [Validators.required, Validators.min(0.25), Validators.max(24)]], note: [''], engagement_id:[0] });
   readonly periodForm = this.fb.nonNullable.group({ label: ['', Validators.required], start_date: ['', Validators.required], end_date: ['', Validators.required], submit_deadline: ['', Validators.required], pay_date: ['', Validators.required] });
   readonly payForm = this.fb.nonNullable.group({ gross: [0, [Validators.required, Validators.min(0)]], taxes: [0, [Validators.required, Validators.min(0)]], deductions: [0, [Validators.required, Validators.min(0)]], source_note: ['', Validators.required] });
   readonly issueForm = this.fb.nonNullable.group({ message: ['', [Validators.required, Validators.minLength(10)]] });
@@ -127,6 +129,8 @@ export class App implements OnInit {
   async openSelection():Promise<void> { this.resetMessages(); this.page.set('selection'); if(this.api.user()?.role==='EMPLOYEE'){try{this.assignedInterviews.set(await this.api.request<any[]>('GET','/selection/my-interviews'));}catch(error){this.error.set(error instanceof Error?error.message:String(error));}} }
   openLeave():void { this.resetMessages(); this.page.set('leave'); }
   openRecords():void { this.resetMessages(); this.page.set('records'); }
+  openEngagements():void { this.resetMessages(); this.page.set('engagements'); }
+  engagementsForDate():import('./api.service').Engagement[]{const d=this.timeForm.controls.work_date.value;return this.myEngagements().filter(e=>e.status==='Activo'&&e.my_start_date&&e.my_end_date&&(!d||(e.my_start_date<=d&&e.my_end_date>=d)));}
   openCalculation():void { this.resetMessages(); this.page.set('calculation'); }
 
   roleName(role?: string): string { return this.roleOptions.find(item => item.value === role)?.label || 'Empleado'; }
@@ -240,6 +244,7 @@ export class App implements OnInit {
     this.resetMessages(); this.loading.set(true);
     try {
       await this.loadPeriods();
+      this.myEngagements.set(await this.api.engagements());
       this.timesheet.set(this.selectedPeriodId ? await this.api.timesheet(this.selectedPeriodId) : null);
       this.page.set('time'); this.loading.set(false);
     } catch (error) { this.fail(error); }
@@ -289,7 +294,7 @@ export class App implements OnInit {
     this.resetMessages(); this.loading.set(true);
     try {
       this.timesheet.set(await this.api.saveTimeEntry({ period_id: this.selectedPeriodId, ...this.timeForm.getRawValue() }));
-      this.timeForm.reset({ work_date: '', hours: 8, note: '' });
+      this.timeForm.reset({ work_date: '', hours: 8, note: '', engagement_id: 0 });
       this.notice.set('Horas guardadas en el borrador.'); this.loading.set(false);
     } catch (error) { this.fail(error); }
   }

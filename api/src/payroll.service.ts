@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, Row } from './database';
+import { EngagementService } from './engagement.service';
 import { User } from './auth';
 
 const statuses = ['Abierto', 'En revisión', 'Bloqueado', 'Procesado', 'Pagado'];
@@ -18,7 +19,7 @@ const id = (value: unknown): number => {
 
 @Injectable()
 export class PayrollService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly db: DatabaseService, private readonly engagements:EngagementService) {}
 
   private payrollOnly(user: User): void {
     if (user.role !== 'PAYROLL') throw new ForbiddenException('Solo Nómina puede administrar pagos y periodos');
@@ -79,16 +80,17 @@ export class PayrollService {
     this.payrollOnly(user);
     return this.db.all('SELECT id,code,first_name,last_name,job_title,status FROM employees ORDER BY code');
   }
-  private async employeeAccess(user: User, employeeId: number, allowManager = false): Promise<void> {
+  private async employeeAccess(user: User, employeeId: number, allowManager = false, periodId?:number): Promise<void> {
     if (user.employee_id === employeeId || user.role === 'PAYROLL') return;
     if (allowManager && user.role === 'MANAGER' && await this.db.get('SELECT id FROM employees WHERE id=? AND manager_id=?', [employeeId, user.employee_id])) return;
+    if(allowManager&&periodId&&user.role==='MANAGER'&&await this.db.get('SELECT t.id FROM timesheets t JOIN time_entries d ON d.timesheet_id=t.id JOIN engagements e ON e.id=d.engagement_id WHERE t.employee_id=? AND t.period_id=? AND e.manager_id=? LIMIT 1',[employeeId,periodId,user.employee_id]))return;
     throw new ForbiddenException('No tienes acceso a los datos de esta persona');
   }
   async timesheet(user: User, periodId: number, employeeId = user.employee_id): Promise<Row> {
-    await this.employeeAccess(user, employeeId, true);
+    await this.employeeAccess(user, employeeId, true,periodId);
     const period = await this.period(periodId);
     const sheet = await this.db.get<Row>('SELECT * FROM timesheets WHERE period_id=? AND employee_id=?', [periodId, employeeId]);
-    const entries = sheet ? await this.db.all<Row>('SELECT * FROM time_entries WHERE timesheet_id=? ORDER BY work_date', [Number(sheet.id)]) : [];
+    const entries = sheet ? await this.db.all<Row>('SELECT t.*,e.name AS engagement_name FROM time_entries t LEFT JOIN engagements e ON e.id=t.engagement_id WHERE t.timesheet_id=? ORDER BY t.work_date', [Number(sheet.id)]) : [];
     return { period, sheet: sheet || { status: 'Borrador', employee_id: employeeId, period_id: periodId }, entries,
       total_hours: entries.reduce((sum, entry) => sum + Number(entry.hours), 0) };
   }
@@ -103,6 +105,9 @@ export class PayrollService {
       throw new BadRequestException('Las horas deben estar entre 0.25 y 24, en incrementos de 0.25');
     const note = input.note === undefined || input.note === null ? '' : String(input.note);
     if (note.length > 300) throw new BadRequestException('Comentario demasiado largo');
+    const engagementId=input.engagement_id? id(input.engagement_id):null;
+    if(engagementId)await this.engagements.validateTimeEntry(user,engagementId,String(input.work_date));
+    else if(await this.db.get('SELECT a.id FROM engagement_assignments a JOIN engagements e ON e.id=a.engagement_id WHERE a.employee_id=? AND a.active=1 AND e.status=? AND a.start_date<=? AND a.end_date>=? LIMIT 1',[user.employee_id,'Activo',String(input.work_date),String(input.work_date)]))throw new BadRequestException('Selecciona el engagement para registrar estas horas');
     let sheet = await this.db.get<Row>('SELECT * FROM timesheets WHERE period_id=? AND employee_id=?', [periodId, user.employee_id]);
     if (sheet && !['Borrador', 'Devuelta'].includes(String(sheet.status))) throw new BadRequestException('La hoja enviada no se puede editar');
     if (!sheet) {
@@ -110,9 +115,9 @@ export class PayrollService {
       sheet = { id: sheetId };
     }
     const existing = await this.db.get<Row>('SELECT id FROM time_entries WHERE timesheet_id=? AND work_date=?', [Number(sheet.id), input.work_date]);
-    if (existing) await this.db.run('UPDATE time_entries SET hours=?,note=?,updated_at=? WHERE id=?', [hours, note, new Date().toISOString(), Number(existing.id)]);
-    else await this.db.run('INSERT INTO time_entries (timesheet_id,work_date,hours,note,updated_at) VALUES (?,?,?,?,?)',
-      [Number(sheet.id), input.work_date, hours, note, new Date().toISOString()]);
+    if (existing) await this.db.run('UPDATE time_entries SET hours=?,note=?,engagement_id=?,updated_at=? WHERE id=?', [hours, note,engagementId, new Date().toISOString(), Number(existing.id)]);
+    else await this.db.run('INSERT INTO time_entries (timesheet_id,work_date,hours,note,engagement_id,updated_at) VALUES (?,?,?,?,?,?)',
+      [Number(sheet.id), input.work_date, hours, note,engagementId, new Date().toISOString()]);
     await this.audit(user, user.employee_id, 'REGISTRAR_HORAS', periodId);
     return this.timesheet(user, periodId);
   }
@@ -129,8 +134,8 @@ export class PayrollService {
   }
   async reviewQueue(user: User): Promise<Row[]> {
     if (user.role !== 'MANAGER' && user.role !== 'PAYROLL') throw new ForbiddenException('Sin acceso a revisión');
-    const filter = user.role === 'MANAGER' ? 'AND e.manager_id=?' : '';
-    const params = user.role === 'MANAGER' ? [user.employee_id] : [];
+    const filter = user.role === 'MANAGER' ? 'AND (e.manager_id=? OR EXISTS(SELECT 1 FROM time_entries d JOIN engagements g ON g.id=d.engagement_id WHERE d.timesheet_id=t.id AND g.manager_id=?))' : '';
+    const params = user.role === 'MANAGER' ? [user.employee_id,user.employee_id] : [];
     return this.db.all(`SELECT t.*,p.label AS period_label,e.first_name,e.last_name,e.code,
       (SELECT COALESCE(SUM(hours),0) FROM time_entries WHERE timesheet_id=t.id) AS total_hours
       FROM timesheets t JOIN payroll_periods p ON p.id=t.period_id JOIN employees e ON e.id=t.employee_id
@@ -140,7 +145,7 @@ export class PayrollService {
     if (user.role !== 'MANAGER' && user.role !== 'PAYROLL') throw new ForbiddenException('Sin acceso a revisión');
     const sheet = await this.db.get<Row>('SELECT * FROM timesheets WHERE id=?', [sheetId]);
     if (!sheet) throw new NotFoundException('Hoja no encontrada');
-    await this.employeeAccess(user, Number(sheet.employee_id), true);
+    await this.employeeAccess(user, Number(sheet.employee_id), true,Number(sheet.period_id));
     if (Number(sheet.employee_id) === user.employee_id) throw new ForbiddenException('No puedes aprobar tu propia hoja');
     if (sheet.status !== 'Enviada') throw new BadRequestException('Solo se resuelven hojas enviadas');
     const reason = typeof comment === 'string' ? comment.trim() : '';

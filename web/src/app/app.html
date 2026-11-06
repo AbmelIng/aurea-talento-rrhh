@@ -30,6 +30,7 @@
         <button type="button" [class.active]="page() === 'me'" (click)="openMe()">Mi información</button>
         @if (canSeePeople()) { <button type="button" [class.active]="page() === 'people' || page() === 'profile' || page() === 'new'" (click)="openPeople()">Personas</button> }
         <button type="button" [class.active]="page() === 'time'" (click)="openTime()">Mi tiempo</button>
+        <button type="button" [class.active]="page() === 'engagements'" (click)="openEngagements()">Mis engagements</button>
         <button type="button" [class.active]="page() === 'payments'" (click)="openPayments()">Mis pagos</button>
         @if (canSeePeople()) { <button type="button" [class.active]="page() === 'recruitment'" (click)="openRecruitment()">Reclutamiento</button> }
         @if (isSelectionSpecialist()) { <button type="button" [class.active]="page() === 'selection'" (click)="openSelection()">Selección avanzada</button> }
@@ -46,6 +47,7 @@
   </header>
 
   <main class="workspace">
+    @if (page() === 'engagements') { <app-engagements /> }
     @if (page() === 'calculation') { <app-payroll-calculation /> }
     @if (page() === 'recruitment') { <app-recruitment /> }
     @if (page() === 'selection') { <section class="mvp-section"><h1>Selección avanzada</h1>@if (api.user()?.role === 'COMPLIANCE' || api.user()?.role === 'PARTNER') { <label>ID de candidatura <input type="number" min="1" [(ngModel)]="selectionApplicationId"></label> }@if(api.user()?.role === 'EMPLOYEE'){<div class="mvp-card"><h2>Mis entrevistas asignadas</h2>@for(i of assignedInterviews();track i.id){<button class="mvp-job" (click)="selectionApplicationId=i.application_id">{{i.full_name}} · {{i.title}} · {{i.scheduled_at}}</button>}@if(!assignedInterviews().length){<p>No hay entrevistas asignadas.</p>}</div>}<app-selection [applicationId]="selectionApplicationId" /></section> }
@@ -115,9 +117,9 @@
         @if (timesheet(); as data) {
           <div class="payroll-stats"><div><small>Estado de la hoja</small><strong>{{ data.sheet.status }}</strong></div><div><small>Horas registradas</small><strong>{{ data.total_hours | number:'1.2-2' }} h</strong></div><div><small>Fecha límite</small><strong>{{ data.period.submit_deadline | date:'dd/MM/yyyy' }}</strong></div></div>
           @if (data.sheet.review_comment) { <p class="alert error">Observación: {{ data.sheet.review_comment }}</p> }
-          <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Horas</th><th>Comentario</th></tr></thead><tbody>@for (entry of data.entries; track entry.id) { <tr><td>{{ entry.work_date | date:'dd/MM/yyyy' }}</td><td>{{ entry.hours | number:'1.2-2' }}</td><td>{{ entry.note || '—' }}</td></tr> } @empty { <tr><td colspan="3" class="empty">Todavía no registras horas en este periodo.</td></tr> }</tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Engagement</th><th>Horas</th><th>Comentario</th></tr></thead><tbody>@for (entry of data.entries; track entry.id) { <tr><td>{{ entry.work_date | date:'dd/MM/yyyy' }}</td><td>{{ entry.engagement_name || 'Trabajo interno' }}</td><td>{{ entry.hours | number:'1.2-2' }}</td><td>{{ entry.note || '—' }}</td></tr> } @empty { <tr><td colspan="4" class="empty">Todavía no registras horas en este periodo.</td></tr> }</tbody></table></div>
           @if (data.period.status === 'Abierto' && (data.sheet.status === 'Borrador' || data.sheet.status === 'Devuelta')) {
-            <form [formGroup]="timeForm" (ngSubmit)="saveTime()" class="payroll-form"><h3>Registrar o corregir un día</h3><div class="form-grid"><label>Fecha<input type="date" formControlName="work_date" [min]="data.period.start_date" [max]="data.period.end_date"></label><label>Horas<input type="number" min="0.25" max="24" step="0.25" formControlName="hours"></label><label class="span-2">Comentario<input formControlName="note" placeholder="Actividad o aclaración"></label></div><div class="row-actions"><button type="submit" class="button secondary">Guardar día</button><button type="button" class="button primary" (click)="submitTime()" [disabled]="!data.entries.length">Enviar hoja</button></div></form>
+            <form [formGroup]="timeForm" (ngSubmit)="saveTime()" class="payroll-form"><h3>Registrar o corregir un día</h3><div class="form-grid"><label>Fecha<input type="date" formControlName="work_date" [min]="data.period.start_date" [max]="data.period.end_date"></label><label>Engagement<select formControlName="engagement_id"><option [ngValue]="0">Trabajo interno / sin encargo</option>@for(e of engagementsForDate();track e.id){<option [ngValue]="e.id">{{e.client_name}} · {{e.name}}</option>}</select></label><label>Horas<input type="number" min="0.25" max="24" step="0.25" formControlName="hours"></label><label class="span-2">Comentario<input formControlName="note" placeholder="Actividad o aclaración"></label></div><div class="row-actions"><button type="submit" class="button secondary">Guardar día</button><button type="button" class="button primary" (click)="submitTime()" [disabled]="!data.entries.length">Enviar hoja</button></div></form>
           }
         }
       </section>

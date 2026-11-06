@@ -1,6 +1,6 @@
-# Aurea Talento — sistema de RR. HH.
+# Aurea Talento — sistema de RR. HH. y encargos de auditoría
 
-Aplicación Angular y NestJS con SQLite o MySQL. Esta copia separada conserva los sprints 1–7 e incorpora condiciones de pago y cálculo masivo por período. La copia `aurea-talento-rrhh-sprint7` permanece disponible sin cambios. El tablero de Sprint Planning es otro proyecto.
+Aplicación Angular y NestJS con SQLite o MySQL. Este branch parte de la copia del sprint 8 y añade clientes y encargos de auditoría. La copia `aurea-talento-rrhh-sprint7` permanece disponible sin cambios. El tablero de Sprint Planning es otro proyecto.
 
 ## Instalación de desarrollo
 
@@ -61,11 +61,20 @@ Los archivos se almacenan en `api/data/uploads` por defecto. Usa `UPLOAD_DIR` pa
 
 **Límites:** no hay cálculo legal automático de IGSS, ISR, prestaciones, horas extra ni facturación de servicios profesionales. La captura manual de boletas en períodos sin cálculo masivo sigue disponible y permite publicación directa. Antes de usar datos reales, valida las reglas laborales y tributarias, establece una política única de publicación, y prueba MySQL en el entorno objetivo.
 
+### Clientes y engagements
+
+1. Una cuenta de **Administración** o **RR. HH.** abre **Mis engagements → Clientes** y registra código, razón social, identificación fiscal, dirección, sedes y contacto. Puede editar y desactivar clientes; los registros relacionados se conservan.
+2. En **Encargos** crea el engagement con cliente, tipo de auditoría, período fiscal, fechas, ubicación, socio, gerente y estado. Los responsables deben ser empleados activos. Después abre el encargo y en **Asignar equipo** registra función, fechas, horas planificadas e instrucciones de llegada de cada participante.
+3. El empleado ve solamente sus encargos asignados en **Mis engagements**, con cliente, calendario de participación, contacto, equipo y horas. El gerente y socio ven los encargos que dirigen; Administración y RR. HH. ven todos. El gerente compara horas planificadas con horas registradas y aprobadas por integrante.
+4. En **Mi hoja de tiempo**, el empleado elige el engagement al registrar horas. Durante una asignación activa el sistema exige esa selección y valida que corresponda al empleado y a la fecha. Las horas se acumulan por encargo; el gerente responsable puede revisar y aprobar la hoja. Las altas, ediciones y retiros de asignaciones quedan en la bitácora.
+
+El flujo de prueba es: crear cliente → crear engagement activo → asignar empleados → entrar como empleado y consultar el encargo → registrar y enviar horas → entrar como gerente y aprobar → consultar las horas en el equipo. La versión actual permite **un registro de horas por empleado y fecha**; registrar otro encargo el mismo día reemplaza el registro anterior. La integración no incluye documentos de auditoría, facturación ni presupuestos complejos.
+
 ## Base de datos y migración
 
 SQLite es el modo local predeterminado. Para MySQL 8.4, `compose.yaml` prepara un contenedor con volumen persistente. Define `MYSQL_PASSWORD` y `MYSQL_ROOT_PASSWORD` antes de `docker compose up -d`; después configura `DB_DRIVER=mysql`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` y `MYSQL_DATABASE` para la API. Véase `api/.env.example`. **El modo MySQL requiere una prueba de integración con un servidor MySQL disponible antes de usarlo con datos reales.**
 
-`api/src/database.ts` contiene migraciones versionadas. Las versiones 1–5 conservan las funciones anteriores. La versión 6 añade tratamiento de pago de ausencias, condiciones con vigencia, ajustes, cálculos y detalles históricos. Las instalaciones anteriores se migran al arrancar sin borrar datos. Haz una copia de la base antes de actualizar.
+`api/src/database.ts` contiene migraciones versionadas. Las versiones 1–5 conservan las funciones anteriores. La versión 6 añade tratamiento de pago de ausencias, condiciones con vigencia, ajustes, cálculos y detalles históricos. La versión 7 crea clientes, engagements y asignaciones, y relaciona las entradas de tiempo con engagements. Las instalaciones anteriores se migran al arrancar sin borrar datos. Haz una copia de la base antes de actualizar.
 
 `api/data/` está excluido de la entrega mediante `.gitignore`. **No copies una base SQLite antigua con usuarios de demostración a una instalación nueva.** Para producción, usa una base vacía y ejecuta `bootstrap:admin` una sola vez. Los datos existentes no se eliminan automáticamente para evitar pérdida accidental.
 

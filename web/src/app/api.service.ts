@@ -21,7 +21,10 @@ export interface AccessLevel { role: Role; label: string; total: number; }
 export interface Account { company: string; country: string; package: string; users: number; }
 export interface AuditEntry { id: number; action: string; employee_id?: number; details: string; created_at: string; }
 export interface PayrollPeriod { id: number; label: string; start_date: string; end_date: string; submit_deadline: string; pay_date: string; status: string; }
-export interface TimeEntry { id: number; work_date: string; hours: number; note?: string; }
+export interface TimeEntry { id: number; work_date: string; hours: number; note?: string; engagement_id?:number|null;engagement_name?:string|null; }
+export interface AuditClient {id:number;code:string;name:string;tax_id?:string;address?:string;offices?:string;contact_name?:string;phone?:string;email?:string;active:number;}
+export interface Engagement {id:number;client_id:number;client_code:string;client_name:string;name:string;audit_type:string;fiscal_period:string;start_date:string;end_date:string;my_start_date?:string;my_end_date?:string;location:string;address?:string;offices?:string;contact_name?:string;phone?:string;email?:string;partner_id:number;manager_id:number;status:string;team?:EngagementAssignment[];}
+export interface EngagementAssignment {id:number;employee_id:number;first_name:string;last_name:string;code:string;team_role:string;start_date:string;end_date:string;planned_hours:number;registered_hours:number;approved_hours:number;arrival_instructions?:string;}
 export interface Timesheet { period: PayrollPeriod; sheet: { id?: number; employee_id: number; period_id: number; status: string; review_comment?: string }; entries: TimeEntry[]; total_hours: number; }
 export interface ReviewSheet { id: number; period_id: number; employee_id: number; status: string; period_label: string; first_name: string; last_name: string; code: string; total_hours: number; }
 export interface PayItem { name: string; amount: number; }
@@ -112,6 +115,13 @@ export class ApiService {
   issues(): Promise<PayrollIssue[]> { return this.request('GET', '/payroll/issues'); }
   reportIssue(data: Record<string, unknown>): Promise<PayrollIssue> { return this.request('POST', '/payroll/issues', data); }
   resolveIssue(id: number, response: string): Promise<PayrollIssue> { return this.request('PATCH', `/payroll/issues/${id}`, { response }); }
+  clients():Promise<AuditClient[]>{return this.request('GET','/clients');}
+  saveClient(data:Record<string,unknown>,id?:number):Promise<AuditClient>{return this.request(id?'PATCH':'POST',id?`/clients/${id}`:'/clients',data);}
+  engagements():Promise<Engagement[]>{return this.request('GET','/engagements');}
+  engagement(id:number):Promise<Engagement>{return this.request('GET',`/engagements/${id}`);}
+  saveEngagement(data:Record<string,unknown>,id?:number):Promise<Engagement>{return this.request(id?'PATCH':'POST',id?`/engagements/${id}`:'/engagements',data);}
+  assignEngagement(id:number,data:Record<string,unknown>):Promise<Engagement>{return this.request('POST',`/engagements/${id}/assignments`,data);}
+  unassignEngagement(id:number,employeeId:number):Promise<Engagement>{return this.request('PATCH',`/engagements/${id}/assignments/${employeeId}/deactivate`,{});}
   payConditions(employeeId:number):Promise<PayCondition[]> { return this.request('GET',`/payroll/conditions/${employeeId}`); }
   addPayCondition(data:Record<string,unknown>):Promise<PayCondition> { return this.request('POST','/payroll/conditions',data); }
   closePayCondition(id:number,effective_to:string):Promise<PayCondition> { return this.request('PATCH',`/payroll/conditions/${id}/close`,{effective_to}); }

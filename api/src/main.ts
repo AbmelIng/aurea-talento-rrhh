@@ -7,6 +7,7 @@ import { DatabaseService } from './database';
 import { PeopleService } from './people.service';
 import { PayrollService } from './payroll.service';
 import { PayrollCalculationService } from './payroll-calculation.service';
+import { EngagementService } from './engagement.service';
 import { SettingsService } from './settings.service';
 import { MvpController } from './mvp.controller';
 import { RecruitmentService } from './recruitment.service';
@@ -24,7 +25,17 @@ function idParam(value: string): number {
 
 @Controller('api')
 class ApiController {
-  constructor(private readonly auth: AuthService, private readonly people: PeopleService, private readonly payroll: PayrollService, private readonly settings:SettingsService, private readonly calculation:PayrollCalculationService) {}
+  constructor(private readonly auth: AuthService, private readonly people: PeopleService, private readonly payroll: PayrollService, private readonly settings:SettingsService, private readonly calculation:PayrollCalculationService,private readonly engagements:EngagementService) {}
+
+  @Get('clients') clients(@Req() req:AuthenticatedRequest){return this.engagements.clients(req.user);}
+  @Post('clients') createClient(@Req() req:AuthenticatedRequest,@Body() body:Record<string,unknown>){return this.engagements.saveClient(req.user,body);}
+  @Patch('clients/:id') updateClient(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Body() body:Record<string,unknown>){return this.engagements.saveClient(req.user,body,idParam(id));}
+  @Get('engagements') engagementList(@Req() req:AuthenticatedRequest){return this.engagements.list(req.user);}
+  @Get('engagements/:id') engagementDetail(@Req() req:AuthenticatedRequest,@Param('id') id:string){return this.engagements.detail(req.user,idParam(id));}
+  @Post('engagements') createEngagement(@Req() req:AuthenticatedRequest,@Body() body:Record<string,unknown>){return this.engagements.saveEngagement(req.user,body);}
+  @Patch('engagements/:id') updateEngagement(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Body() body:Record<string,unknown>){return this.engagements.saveEngagement(req.user,body,idParam(id));}
+  @Post('engagements/:id/assignments') assignEngagement(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Body() body:Record<string,unknown>){return this.engagements.assign(req.user,idParam(id),body);}
+  @Patch('engagements/:id/assignments/:employeeId/deactivate') unassignEngagement(@Req() req:AuthenticatedRequest,@Param('id') id:string,@Param('employeeId') employeeId:string){return this.engagements.unassign(req.user,idParam(id),idParam(employeeId));}
 
   @Get('settings/form-options')
   formOptions(@Req() req:AuthenticatedRequest) { return this.settings.formOptions(req.user); }
@@ -208,7 +219,7 @@ class ApiController {
 
 @Module({
   controllers: [ApiController, MvpController, SelectionController],
-  providers: [DatabaseService, AuthService, PeopleService, PayrollService, PayrollCalculationService, SettingsService, RecruitmentService, LeaveService, RecordsService, SelectionService, { provide: APP_GUARD, useClass: SessionGuard }],
+  providers: [DatabaseService, AuthService, PeopleService, PayrollService, PayrollCalculationService, EngagementService, SettingsService, RecruitmentService, LeaveService, RecordsService, SelectionService, { provide: APP_GUARD, useClass: SessionGuard }],
 })
 class AppModule {}
 
