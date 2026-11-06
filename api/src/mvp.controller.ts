@@ -14,6 +14,7 @@ export class MvpController {
   @Public() @Get('careers/:id') career(@Param('id') vacancy:string){return this.recruitment.publicOne(id(vacancy));}
   @Public() @Post('careers/:id/apply') apply(@Param('id') vacancy:string,@Body() body:Record<string,unknown>){return this.recruitment.apply(id(vacancy),body);}
   @Get('vacancies') vacancies(@Req() req:AuthenticatedRequest){return this.recruitment.list(req.user);}
+  @Get('vacancies/question-library') questionLibrary(@Req() req:AuthenticatedRequest){return this.recruitment.questionLibrary(req.user);}
   @Post('vacancies') newVacancy(@Req() req:AuthenticatedRequest,@Body() body:Record<string,unknown>){return this.recruitment.create(req.user,body);}
   @Patch('vacancies/:id') editVacancy(@Req() req:AuthenticatedRequest,@Param('id') vacancy:string,@Body() body:Record<string,unknown>){return this.recruitment.update(req.user,id(vacancy),body);}
   @Patch('vacancies/:id/questions') vacancyQuestions(@Req() req:AuthenticatedRequest,@Param('id') vacancy:string,@Body() body:{questions?:unknown}){return this.recruitment.setQuestions(req.user,id(vacancy),body?.questions);}

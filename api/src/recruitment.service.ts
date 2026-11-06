@@ -62,6 +62,7 @@ export class RecruitmentService {
     await this.db.run('UPDATE vacancies SET questions_json=?,updated_at=? WHERE id=?',[JSON.stringify(questions(input)),now(),id]);
     return this.vacancy(id);
   }
+  async questionLibrary(user:User):Promise<VacancyQuestion[]>{if(!canManage(user))throw new ForbiddenException('Solo RR. HH. consulta preguntas');const rows=await this.db.all<{questions_json:string}>('SELECT questions_json FROM vacancies WHERE questions_json IS NOT NULL');const found=new Map<string,VacancyQuestion>();for(const row of rows){try{for(const q of questions(JSON.parse(row.questions_json))){const key=JSON.stringify([q.title,q.type,q.options]);found.set(key,q);}}catch{/* Ignora preguntas legadas que no cumplen el esquema actual. */}}return [...found.values()];}
   async create(user:User,input:Record<string,unknown>):Promise<Row> {
     if(!canManage(user)&&user.role!=='MANAGER') throw new ForbiddenException('Sin permiso para solicitar vacantes');
     const manager=canManage(user)?Number(input.hiring_manager_id):user.employee_id;

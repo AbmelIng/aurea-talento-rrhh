@@ -6,6 +6,7 @@ const id=(v:string)=>{const n=Number(v);if(!Number.isInteger(n)||n<1)throw new B
 export class SelectionController {
   constructor(private readonly service:SelectionService) {}
   @Get('applications/:id') detail(@Req() r:AuthenticatedRequest,@Param('id') application:string){return this.service.detail(r.user,id(application));}
+  @Get('applications/:id/cv') cv(@Req() r:AuthenticatedRequest,@Param('id') application:string){return this.service.cv(r.user,id(application));}
   @Get('talent-pool') talentPool(@Req() r:AuthenticatedRequest){return this.service.talentPool(r.user);}
   @Get('my-interviews') myInterviews(@Req() r:AuthenticatedRequest){return this.service.myInterviews(r.user);}
   @Post('applications/:id/communications') communicate(@Req() r:AuthenticatedRequest,@Param('id') application:string,@Body() b:Record<string,unknown>){return this.service.communicate(r.user,id(application),b);}

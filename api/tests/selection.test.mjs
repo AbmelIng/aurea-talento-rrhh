@@ -42,7 +42,8 @@ test('sprint 7: plantilla aprobada por RR. HH. y Legal, independencia y oferta v
     assert.equal((await req(`/selection/applications/${appId}/interviews`,'POST',admin,{scheduled_at:'2026-12-02T10:00:00',mode:'Virtual',place:'Sala privada',interviewer_id:interviewerId})).status,201);
     assert.equal((await req('/selection/my-interviews','GET',worker)).data.length,1);
     const limited=(await req(`/selection/applications/${appId}`,'GET',worker)).data;
-    assert.equal(limited.offers.length,0);assert.equal(limited.checks.length,0);assert.equal(limited.events.length,0);
+    assert.equal(limited.offers.length,0);assert.equal(limited.checks.length,0);assert.equal(limited.events.length,0);assert.equal(limited.independence,null);
+    assert.equal((await req(`/selection/applications/${appId}/cv`,'GET',worker)).status,200);
     assert.equal((await req(`/selection/applications/${appId}/evaluations`,'POST',manager,{scores:{'Auditoría y contabilidad (NIIF/NIA)':2,'Análisis':3,'Comunicación':3,'Inglés':3,'Criterio profesional':3,'Ética':4},recommendation:'Contratar',comment:''})).status,400);
     assert.equal((await req(`/selection/applications/${appId}/evaluations`,'POST',manager,{scores:{'Auditoría y contabilidad (NIIF/NIA)':2,'Análisis':3,'Comunicación':3,'Inglés':3,'Criterio profesional':3,'Ética':4},recommendation:'Contratar',comment:'Reforzar normas.'})).status,201);
     assert.equal((await req(`/selection/applications/${appId}/recommend`,'POST',manager,{note:'Recomiendo continuar'})).status,201);
@@ -56,6 +57,7 @@ test('sprint 7: plantilla aprobada por RR. HH. y Legal, independencia y oferta v
     assert.equal((await req(`/selection/offers/${offer.id}/send`,'POST',admin,{})).status,409);
     assert.equal((await req(`/selection/offers/${offer.id}/approve`,'POST',manager,{})).status,201);
     assert.equal((await req(`/selection/offers/${offer.id}/approve`,'POST',admin,{})).status,201);
+    assert.equal((await req(`/selection/applications/${appId}`,'GET',admin)).data.offers[0].status,'Aprobada');
     assert.equal((await req(`/selection/offers/${offer.id}/send`,'POST',admin,{})).status,201);
     assert.equal((await req(`/selection/offers/${offer.id}/respond`,'POST',admin,{status:'Aceptada',evidence:'Carta firmada recibida'})).status,201);
   }finally{if(server?.exitCode===null){server.kill();await new Promise(resolve=>server.once('exit',resolve));}rmSync(dir,{recursive:true,force:true});}
