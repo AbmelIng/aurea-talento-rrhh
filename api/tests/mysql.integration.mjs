@@ -4,6 +4,8 @@ import { DatabaseService } from '../dist/database.js';
 import { EngagementService } from '../dist/engagement.service.js';
 import { PayrollService } from '../dist/payroll.service.js';
 import { PayrollCalculationService } from '../dist/payroll-calculation.service.js';
+import { SettingsService } from '../dist/settings.service.js';
+import { PeopleService } from '../dist/people.service.js';
 
 test('MySQL: migraciones, encargo, hoja de tiempo y cálculo de nómina', async () => {
   assert.equal(process.env.DB_DRIVER, 'mysql', 'Esta prueba requiere DB_DRIVER=mysql');
@@ -65,6 +67,22 @@ test('MySQL: migraciones, encargo, hoja de tiempo y cálculo de nómina', async 
     await calculation.publish(payrollUser, period);
     assert.equal((await calculation.run(admin, period)).status, 'Publicado');
     assert.equal(Number((await engagements.detail(manager, engagement.id)).team[0].approved_hours), 8);
+
+    const settings = new SettingsService(db);
+    const people = new PeopleService(db, settings);
+    const options = {};
+    for (const category of ['job_title', 'area', 'service_line', 'office', 'employment_type']) {
+      options[`${category}_id`] = (await settings.create(admin, category, `Opción ${category}`)).id;
+    }
+    const createPerson = (number) => people.create(admin, {
+      first_name: `Persona${number}`, last_name: 'Prueba', work_email: `persona${number}@example.test`,
+      hire_date: '2026-11-16', ...options,
+    });
+    const created = await Promise.all([createPerson(1), createPerson(2)]);
+    assert.deepEqual(created.map(result => result.employee.code).sort(), ['EMP-0001', 'EMP-0002'], 'La reserva simultánea no duplica códigos');
+    const codeConfig = await settings.updateCodeConfig(admin, { prefix: 'TEAM', separator: '-', digits: 3, next_number: 3 });
+    assert.equal(codeConfig.separator, '-');
+    assert.equal((await createPerson(3)).employee.code, 'TEAM-003');
 
     await db.onModuleDestroy();
     db = new DatabaseService();
