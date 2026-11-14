@@ -7,7 +7,8 @@
     "start": "node dist/main.js",
     "build": "tsc -p tsconfig.json",
     "bootstrap:admin": "npm run build && node dist/bootstrap-admin.js",
-    "test": "npm run build && node --test tests/*.test.mjs"
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "test:mysql": "npm run build && node --test tests/mysql.integration.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.0",

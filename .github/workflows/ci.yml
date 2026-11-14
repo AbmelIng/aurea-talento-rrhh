@@ -66,3 +66,48 @@ jobs:
         run: npm test -- --watch=false
       - name: Compilar versión de producción
         run: npm run build
+
+  mysql:
+    name: MySQL · migraciones y recorrido principal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: aurea_ci
+          MYSQL_USER: aurea_ci
+          MYSQL_PASSWORD: test-only-password
+          MYSQL_ROOT_PASSWORD: test-only-root-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -ptest-only-root-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    defaults:
+      run:
+        working-directory: api
+    env:
+      DB_DRIVER: mysql
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: '3306'
+      MYSQL_USER: aurea_ci
+      MYSQL_PASSWORD: test-only-password
+      MYSQL_DATABASE: aurea_ci
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Preparar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Probar MySQL
+        run: npm run test:mysql
