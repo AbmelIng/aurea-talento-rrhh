@@ -94,6 +94,8 @@ Las reglas de festivos y horarios variables, correos automáticos, firma del paq
 
 ## Comprobación
 
+El workflow `.github/workflows/ci.yml` verifica el branch `cloud/despliegue`, las propuestas de cambio hacia él o `main`, y los cambios directos en `main`. Usa Node.js 24 en Ubuntu: instala con `npm ci`, compila y prueba la API, y prueba y compila Angular. No necesita secretos ni despliega la aplicación. Las pruebas actuales usan SQLite temporal; la prueba con MySQL se añadirá en el siguiente paso de cloud.
+
 ```powershell
 cd api
 npm test

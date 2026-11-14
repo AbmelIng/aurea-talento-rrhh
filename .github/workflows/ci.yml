@@ -1,0 +1,68 @@
+name: Verificación del proyecto
+
+on:
+  push:
+    branches:
+      - main
+      - cloud/despliegue
+  pull_request:
+    branches:
+      - main
+      - cloud/despliegue
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API · compilación y pruebas
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Preparar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Compilar y ejecutar pruebas
+        run: npm test
+
+  web:
+    name: Angular · pruebas y compilación
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Preparar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Ejecutar pruebas
+        run: npm test -- --watch=false
+      - name: Compilar versión de producción
+        run: npm run build
