@@ -72,7 +72,31 @@ El flujo de prueba es: crear cliente → crear engagement activo → asignar emp
 
 ## Base de datos y migración
 
-SQLite es el modo local predeterminado. Para MySQL 8.4, `compose.yaml` prepara un contenedor con volumen persistente. Define `MYSQL_PASSWORD` y `MYSQL_ROOT_PASSWORD` antes de `docker compose up -d`; después configura `DB_DRIVER=mysql`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` y `MYSQL_DATABASE` para la API. Véase `api/.env.example`. GitHub Actions prueba cada cambio con un contenedor MySQL 8.4 temporal y una base vacía. **Cambiar `DB_DRIVER` no copia los datos de SQLite a MySQL**; una migración de datos existentes requiere un procedimiento aparte.
+SQLite es el modo local predeterminado cuando la API se ejecuta directamente con Node. `compose.yaml` inicia la API y MySQL 8.4 juntos; la API usa MySQL obligatoriamente y espera a que esté listo. MySQL guarda datos en `mysql_data` y los documentos subidos en `uploads_data`. Ambos volúmenes sobreviven a `docker compose down`; **`docker compose down --volumes` los elimina**. GitHub Actions prueba cada cambio con un MySQL temporal y una base vacía. **Arrancar Compose no copia los datos SQLite existentes a MySQL**; esa migración de datos requiere un procedimiento aparte.
+
+### Iniciar API y MySQL con Docker Compose
+
+Requiere Docker con Compose. En la raíz del repositorio, copia `.env.example` a `.env` y configura contraseñas privadas, una `APP_SECRET` aleatoria y estable de al menos 32 caracteres, y `WEB_ORIGIN` con la dirección exacta del frontend. El archivo `.env` está excluido de Git. Para una prueba local, `WEB_ORIGIN=http://localhost:4201`; para el servidor definitivo, usa el dominio HTTPS de Angular.
+
+```powershell
+Copy-Item .env.example .env
+# Edita .env antes de continuar.
+docker compose config --quiet
+docker compose up -d --build --wait
+Invoke-RestMethod http://127.0.0.1:3001/api/health
+```
+
+En una instalación nueva, crea el primer administrador una sola vez. Define las tres variables `BOOTSTRAP_*` en la misma terminal y ejecuta el código ya compilado dentro del contenedor; la contraseña inicial se muestra una sola vez:
+
+```powershell
+$env:BOOTSTRAP_EMAIL = 'administrador@suempresa.com'
+$env:BOOTSTRAP_FIRST_NAME = 'Nombre'
+$env:BOOTSTRAP_LAST_NAME = 'Apellido'
+docker compose run --rm -e BOOTSTRAP_EMAIL -e BOOTSTRAP_FIRST_NAME -e BOOTSTRAP_LAST_NAME api node dist/bootstrap-admin.js
+Remove-Item Env:BOOTSTRAP_EMAIL,Env:BOOTSTRAP_FIRST_NAME,Env:BOOTSTRAP_LAST_NAME
+```
+
+La API queda accesible solo desde el propio servidor en `127.0.0.1:3001`. Angular puede seguir ejecutándose localmente con `npm start` desde `web`; más adelante un proxy HTTPS conectará Vercel con la API. `docker compose logs -f api` muestra el arranque y `docker compose down` detiene los servicios sin borrar sus datos. No reutilices las contraseñas de prueba del workflow en una instalación propia.
 
 `api/src/database.ts` contiene migraciones versionadas. Las versiones 1–5 conservan las funciones anteriores. La versión 6 añade tratamiento de pago de ausencias, condiciones con vigencia, ajustes, cálculos y detalles históricos. La versión 7 crea clientes, engagements y asignaciones, y relaciona las entradas de tiempo con engagements. Las instalaciones anteriores se migran al arrancar sin borrar datos. Haz una copia de la base antes de actualizar.
 
@@ -94,7 +118,7 @@ Las reglas de festivos y horarios variables, correos automáticos, firma del paq
 
 ## Comprobación
 
-El workflow `.github/workflows/ci.yml` verifica el branch `cloud/despliegue`, las propuestas de cambio hacia él o `main`, y los cambios directos en `main`. Usa Node.js 24 en Ubuntu: instala con `npm ci`, compila y prueba la API, y prueba y compila Angular. Otro trabajo inicia MySQL 8.4 temporal y verifica migraciones 1–7, reinicio sin pérdida, clientes, engagements, hojas de tiempo, nómina y códigos de empleado concurrentes. No necesita secretos ni despliega la aplicación. La prueba MySQL exige una **base de pruebas vacía** y crea registros ficticios; nunca la ejecutes contra una base con datos reales.
+El workflow `.github/workflows/ci.yml` verifica el branch `cloud/despliegue`, las propuestas de cambio hacia él o `main`, y los cambios directos en `main`. Usa Node.js 24 en Ubuntu: instala con `npm ci`, compila y prueba la API, y prueba y compila Angular. Otro trabajo inicia MySQL 8.4 temporal y verifica migraciones 1–7, reinicio sin pérdida, clientes, engagements, hojas de tiempo, nómina y códigos de empleado concurrentes. Un trabajo adicional construye e inicia el Compose completo y comprueba la API contra MySQL. No necesita secretos reales ni despliega la aplicación. La prueba MySQL exige una **base de pruebas vacía** y crea registros ficticios; nunca la ejecutes contra una base con datos reales.
 
 ```powershell
 cd api

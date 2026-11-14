@@ -25,7 +25,11 @@ function idParam(value: string): number {
 
 @Controller('api')
 class ApiController {
-  constructor(private readonly auth: AuthService, private readonly people: PeopleService, private readonly payroll: PayrollService, private readonly settings:SettingsService, private readonly calculation:PayrollCalculationService,private readonly engagements:EngagementService) {}
+  constructor(private readonly auth: AuthService, private readonly people: PeopleService, private readonly payroll: PayrollService, private readonly settings:SettingsService, private readonly calculation:PayrollCalculationService,private readonly engagements:EngagementService, private readonly db:DatabaseService) {}
+
+  @Public()
+  @Get('health')
+  async health() { await this.db.get('SELECT 1 AS ok'); return { status: 'ok' }; }
 
   @Get('clients') clients(@Req() req:AuthenticatedRequest){return this.engagements.clients(req.user);}
   @Post('clients') createClient(@Req() req:AuthenticatedRequest,@Body() body:Record<string,unknown>){return this.engagements.saveClient(req.user,body);}
@@ -230,8 +234,9 @@ async function bootstrap() {
   app.use(json({limit:'8mb'}));
   await app.get(DatabaseService).initialize();
   const port = Number(process.env.PORT || 3001);
-  await app.listen(port, '127.0.0.1');
-  console.log(`API local disponible en http://localhost:${port}/api`);
+  const host = process.env.HOST || '127.0.0.1';
+  await app.listen(port, host);
+  console.log(`API disponible en http://${host}:${port}/api`);
 }
 
 bootstrap().catch(error => { console.error(error); process.exitCode = 1; });

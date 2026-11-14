@@ -111,3 +111,31 @@ jobs:
         run: npm ci
       - name: Probar MySQL
         run: npm run test:mysql
+
+  compose:
+    name: Docker Compose · API y MySQL
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      MYSQL_PASSWORD: integration-only-password
+      MYSQL_ROOT_PASSWORD: integration-only-root-password
+      APP_SECRET: integration-only-secret-at-least-32-characters
+      WEB_ORIGIN: http://localhost:4201
+      API_PORT: '3001'
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Validar Compose
+        run: docker compose config --quiet
+      - name: Construir e iniciar servicios
+        run: docker compose up -d --build --wait --wait-timeout 180
+      - name: Comprobar API y base de datos
+        run: curl --fail --silent --show-error http://127.0.0.1:3001/api/health
+      - name: Mostrar diagnóstico si falla
+        if: failure()
+        run: docker compose logs --tail=100 api mysql
+      - name: Retirar contenedores de prueba
+        if: always()
+        run: docker compose down --volumes
