@@ -203,7 +203,7 @@ export class DatabaseService implements OnModuleDestroy {
     const ddl = mysqlMode ? [
       `CREATE TABLE IF NOT EXISTS schema_migrations (version INT PRIMARY KEY, applied_at VARCHAR(30) NOT NULL)`,
       `CREATE TABLE IF NOT EXISTS catalog_options (id INT AUTO_INCREMENT PRIMARY KEY, category VARCHAR(30) NOT NULL, name VARCHAR(140) NOT NULL, active TINYINT(1) NOT NULL DEFAULT 1, UNIQUE KEY uq_catalog (category,name))`,
-      `CREATE TABLE IF NOT EXISTS employee_code_config (id INT PRIMARY KEY, prefix VARCHAR(20) NOT NULL, separator VARCHAR(5) NOT NULL, digits INT NOT NULL, next_number BIGINT NOT NULL)`,
+      `CREATE TABLE IF NOT EXISTS employee_code_config (id INT PRIMARY KEY, prefix VARCHAR(20) NOT NULL, \`separator\` VARCHAR(5) NOT NULL, digits INT NOT NULL, next_number BIGINT NOT NULL)`,
     ] : [
       `CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)`,
       `CREATE TABLE IF NOT EXISTS catalog_options (id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT NOT NULL, name TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, UNIQUE(category,name))`,
@@ -238,7 +238,7 @@ export class DatabaseService implements OnModuleDestroy {
     }
     if (!(await this.get('SELECT id FROM employee_code_config WHERE id=1'))) {
       const max = await this.get<{n:number}>('SELECT COALESCE(MAX(id),0) AS n FROM employees');
-      await this.run('INSERT INTO employee_code_config (id,prefix,separator,digits,next_number) VALUES (1,?,?,?,?)',['EMP','-',4,Number(max?.n || 0)+1]);
+      await this.run('INSERT INTO employee_code_config (id,prefix,`separator`,digits,next_number) VALUES (1,?,?,?,?)',['EMP','-',4,Number(max?.n || 0)+1]);
     }
     if (!(await this.get('SELECT version FROM schema_migrations WHERE version=2'))) {
       for (const sql of mysqlMode ? mysqlMvpSchema : sqliteMvpSchema) await this.executeDdl(sql);

@@ -88,7 +88,7 @@ export class PeopleService {
     const id = await this.db.transaction(async tx=>{
       if(await tx.get('SELECT id FROM employees WHERE work_email=?',[workEmail])) throw new ConflictException('Correo ya registrado');
       const config=await tx.get<{prefix:string;separator:string;digits:number;next_number:number}>(
-        'SELECT prefix,separator,digits,next_number FROM employee_code_config WHERE id=1'+(process.env.DB_DRIVER==='mysql'?' FOR UPDATE':''));
+        'SELECT prefix,`separator`,digits,next_number FROM employee_code_config WHERE id=1'+(process.env.DB_DRIVER==='mysql'?' FOR UPDATE':''));
       if(!config) throw new ConflictException('Configura la numeración antes de crear empleados');
       let number=Number(config.next_number),code='';
       do { code=`${config.prefix}${config.separator}${String(number).padStart(Number(config.digits),'0')}`; number++; }

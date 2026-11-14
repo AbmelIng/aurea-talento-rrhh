@@ -72,7 +72,7 @@ export class SettingsService {
     await this.db.transaction(async tx=>{
       const current=await tx.get<{next_number:number}>('SELECT next_number FROM employee_code_config WHERE id=1'+(process.env.DB_DRIVER==='mysql'?' FOR UPDATE':''));
       if(!current||next<Number(current.next_number)) throw new BadRequestException('No se puede retroceder la numeración');
-      await tx.run('UPDATE employee_code_config SET prefix=?,separator=?,digits=?,next_number=? WHERE id=1',[prefix,separator,digits,next]);
+      await tx.run('UPDATE employee_code_config SET prefix=?,`separator`=?,digits=?,next_number=? WHERE id=1',[prefix,separator,digits,next]);
     });
     return this.codeConfig(user);
   }
