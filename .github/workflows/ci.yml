@@ -64,6 +64,8 @@ jobs:
         run: npm ci
       - name: Ejecutar pruebas
         run: npm test -- --watch=false
+      - name: Verificar rutas de Vercel
+        run: npm run test:vercel
       - name: Compilar versión de producción
         run: npm run build
 

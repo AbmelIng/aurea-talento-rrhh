@@ -42,8 +42,8 @@ export interface PayrollRunHistory { id:number;period_id:number;status:string;la
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   readonly user = signal<User | null>(null);
-  private readonly base = ['localhost','127.0.0.1'].includes(window.location.hostname)
-    ? 'http://127.0.0.1:3001/api' : `${window.location.origin}/api`;
+  private readonly local = ['localhost','127.0.0.1'].includes(window.location.hostname);
+  private readonly base = this.local ? 'http://127.0.0.1:3001/api' : '/api';
   private token = sessionStorage.getItem('aurea_token') || '';
   constructor(private readonly http: HttpClient) {}
 
@@ -56,7 +56,7 @@ export class ApiService {
       if (error instanceof HttpErrorResponse) {
         if (error.status === 401 && path !== '/auth/login') this.logout();
         const message = error.error?.message;
-        throw new Error(Array.isArray(message) ? message.join(', ') : message || (error.status === 0 ? 'No se puede conectar a la API local. Inicia el servidor NestJS.' : 'No se pudo completar la operación.'));
+        throw new Error(Array.isArray(message) ? message.join(', ') : message || (error.status === 0 ? (this.local ? 'No se puede conectar a la API local. Inicia el servidor NestJS.' : 'No se puede conectar a la API. Verifica que esté disponible.') : 'No se pudo completar la operación.'));
       }
       throw error;
     }

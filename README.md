@@ -96,7 +96,13 @@ docker compose run --rm -e BOOTSTRAP_EMAIL -e BOOTSTRAP_FIRST_NAME -e BOOTSTRAP_
 Remove-Item Env:BOOTSTRAP_EMAIL,Env:BOOTSTRAP_FIRST_NAME,Env:BOOTSTRAP_LAST_NAME
 ```
 
-La API queda accesible solo desde el propio servidor en `127.0.0.1:3001`. Angular puede seguir ejecutándose localmente con `npm start` desde `web`; más adelante un proxy HTTPS conectará Vercel con la API. `docker compose logs -f api` muestra el arranque y `docker compose down` detiene los servicios sin borrar sus datos. No reutilices las contraseñas de prueba del workflow en una instalación propia.
+La API queda accesible solo desde el propio servidor en `127.0.0.1:3001`. Angular puede seguir ejecutándose localmente con `npm start` desde `web`; para Vercel se necesita un proxy HTTPS público delante de la API. `docker compose logs -f api` muestra el arranque y `docker compose down` detiene los servicios sin borrar sus datos. No reutilices las contraseñas de prueba del workflow en una instalación propia.
+
+### Frontend en Vercel
+
+Importa el repositorio en Vercel y configura **Root Directory = `web`**. La configuración `web/vercel.mjs` usa la salida real de Angular (`dist/aurea-talento-web/browser`), dirige `/api/*` al backend y conserva las rutas del frontend al abrirlas directamente. En **Environment Variables**, define `AUREA_API_ORIGIN` con el **origen HTTPS público** de NestJS, por ejemplo `https://api.suempresa.com` (sin `/api` al final). Así `/api/health` en Vercel llegará a `https://api.suempresa.com/api/health`. La compilación rechaza una dirección vacía, HTTP o una ruta duplicada. Configura el valor por separado para producción y vistas previas; estas últimas deberían apuntar a una API de pruebas si contienen datos sensibles. Las respuestas de `/api/*` se marcan como privadas y sin caché.
+
+En el servidor de la API, establece `WEB_ORIGIN` al dominio HTTPS del frontend. El Compose actual solo publica la API en la interfaz local: **no sirve como origen público de Vercel** hasta configurar el proxy HTTPS y el dominio del servidor. Tras conectar ambos servicios, comprueba `https://<frontend>/api/health`, la página `/empleos`, el inicio de sesión y una vista protegida. Un cambio en la variable de Vercel requiere un nuevo despliegue.
 
 `api/src/database.ts` contiene migraciones versionadas. Las versiones 1–5 conservan las funciones anteriores. La versión 6 añade tratamiento de pago de ausencias, condiciones con vigencia, ajustes, cálculos y detalles históricos. La versión 7 crea clientes, engagements y asignaciones, y relaciona las entradas de tiempo con engagements. Las instalaciones anteriores se migran al arrancar sin borrar datos. Haz una copia de la base antes de actualizar.
 
@@ -107,7 +113,7 @@ La API queda accesible solo desde el propio servidor en `127.0.0.1:3001`. Angula
 1. Prepara el servidor, la base de datos vacía y copias de seguridad verificadas. No expongas el puerto de MySQL a Internet.
 2. Configura `NODE_ENV=production`, una `APP_SECRET` aleatoria y estable de al menos 32 caracteres, `WEB_ORIGIN` exacto y las variables de base de datos. La API no arranca en producción sin las dos primeras variables requeridas.
 3. Ejecuta `npm ci` y `npm run bootstrap:admin` en la API, con acceso restringido a la consola. Retira las variables `BOOTSTRAP_*` del entorno después.
-4. Compila con `npm run build` en `api` y `web`, y ejecuta `npm start` desde `api` bajo un supervisor de procesos. Publica Angular y coloca NestJS detrás de un proxy HTTPS que sirva `/api` en el mismo origen. En desarrollo, Angular llama a `127.0.0.1:3001`; en otro host usa `/api` del origen actual.
+4. Compila con `npm run build` en `api` y `web`, y ejecuta `npm start` desde `api` bajo un supervisor de procesos o usa Docker Compose. Publica Angular en Vercel con `AUREA_API_ORIGIN` y coloca NestJS detrás de un proxy HTTPS. En desarrollo, Angular llama a `127.0.0.1:3001`; en Vercel usa `/api` del origen actual.
 5. Entra como administrador, cambia la contraseña inicial, configura los catálogos y los códigos, y luego crea las demás cuentas. Comprueba permisos y respaldos con datos no sensibles antes de cargar expedientes reales.
 
 ## Seguridad y alcance
