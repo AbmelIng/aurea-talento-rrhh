@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/aurea-talento-web/browser",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "${AUREA_API_ORIGIN}/api/$1",
+      "env": ["AUREA_API_ORIGIN"],
+      "headers": { "cache-control": "private, no-store" }
+    },
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
+  ]
+}
