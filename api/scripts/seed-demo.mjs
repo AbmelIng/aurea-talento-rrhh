@@ -7,7 +7,7 @@ if (process.env.NODE_ENV === 'production' || process.env.DB_DRIVER === 'mysql') 
   throw new Error('La demostración solo se puede crear con SQLite fuera de producción.');
 }
 
-const dataDir = resolve('data');
+const dataDir = resolve(process.env.AUREA_DEMO_DIR || 'data');
 const databaseFile = resolve(dataDir, 'aurea-demo.sqlite');
 const credentialsFile = resolve(dataDir, 'demo-credentials.json');
 const secretFile = resolve(dataDir, 'demo-secret.txt');
@@ -80,6 +80,21 @@ try {
     [`Nómina de demostración ${year}-${String(month + 1).padStart(2, '0')}`, monthStart, monthEnd,
       monthEnd, monthEnd, 'Abierto', userIds.PAYROLL, now],
   );
+  await db.run(
+    'INSERT INTO vacancies (title,area,level,employment_type,municipality,department,modality,description,requirements,deadline,openings,status,hiring_manager_id,is_new_position,approved_manager_at,approved_hr_at,created_by,created_at,updated_at,questions_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    ['Auditoría junior de demostración', 'Auditoría', 'Junior', 'Plazo indefinido',
+      'Guatemala', 'Guatemala', 'Híbrido', 'Vacante ficticia para la presentación.',
+      'Conocimientos básicos de auditoría.', engagementEnd, 1, 'Abierta', ids.MANAGER,
+      0, now, now, userIds.HR_ADMIN, now, now, '[]'],
+  );
+  const leaveTypeId = await db.run(
+    'INSERT INTO leave_types (name,unit,active,pay_treatment) VALUES (?,?,?,?)',
+    ['Vacaciones de demostración', 'Horas', 1, 'Pagada'],
+  );
+  await db.run(
+    'INSERT INTO leave_balances (employee_id,leave_type_id,available_hours) VALUES (?,?,?)',
+    [ids.EMPLOYEE, leaveTypeId, 40],
+  );
   for (const person of people) {
     await db.run(
       'INSERT INTO pay_conditions (employee_id,kind,amount,daily_hours,effective_from,effective_to,created_by,created_at) VALUES (?,?,?,?,?,?,?,?)',
@@ -90,7 +105,7 @@ try {
 
   writeFileSync(credentialsFile, JSON.stringify(credentials, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
   writeFileSync(secretFile, randomBytes(32).toString('hex') + '\n', { mode: 0o600, flag: 'wx' });
-  console.log(`Demostración local creada: ${people.length} cuentas, un cliente, un encargo y un período.`);
+  console.log(`Demostración local creada: ${people.length} cuentas, un cliente, un encargo, una vacante, vacaciones y un período.`);
   console.log(`Credenciales: ${credentialsFile}`);
   console.log(`Clave local de sesiones: ${secretFile}`);
   console.log('Ningún dato se agregó a la instalación pública.');

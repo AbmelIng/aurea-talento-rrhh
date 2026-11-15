@@ -122,6 +122,8 @@ Cuando se publique Angular, establece `WEB_ORIGIN` al origen exacto de Vercel y 
 
 ## Puesta en servicio
 
+La guía de [respaldos y recuperación](docs/OPERACION_RESPALDOS.md) incluye la copia de MySQL y documentos, una restauración automatizada en MySQL aislado y los pasos para recuperar una instalación vacía. El [recorrido de presentación](docs/RECORRIDO_PRESENTACION.md) prepara ocho cuentas y datos ficticios **solo en SQLite local**, con un ensayo automatizado de los roles y el flujo de horas y nómina.
+
 1. Prepara el servidor, la base de datos vacía y copias de seguridad verificadas. No expongas el puerto de MySQL a Internet.
 2. Configura `NODE_ENV=production`, una `APP_SECRET` aleatoria y estable de al menos 32 caracteres, `WEB_ORIGIN` exacto y las variables de base de datos. La API no arranca en producción sin las dos primeras variables requeridas.
 3. Ejecuta `npm ci` y `npm run bootstrap:admin` en la API, con acceso restringido a la consola. Retira las variables `BOOTSTRAP_*` del entorno después.
@@ -132,7 +134,7 @@ Cuando se publique Angular, establece `WEB_ORIGIN` al origen exacto de Vercel y 
 
 Las contraseñas se guardan con `scrypt`; las sesiones firmadas expiran a las ocho horas. Cambiar la contraseña revoca las sesiones anteriores. `ADMIN` puede delegar el permiso **MODIFICACIÓN Catálogos del sistema** sin ceder el rol de administrador. Los formularios cargan opciones del backend y este valida que pertenezcan a la categoría y estén activas. El código de empleado se reserva en una transacción y tiene restricción única. El cálculo nuevo usa condiciones y horas aprobadas, y exige aprobación antes de publicación; **no calcula impuestos legalmente ni ejecuta pagos bancarios**.
 
-Las reglas de festivos y horarios variables, correos automáticos, firma del paquete de bienvenida, firma electrónica de ofertas, cálculo tributario y de prestaciones, antivirus, conservación y eliminación automatizada de candidaturas y auditoría exhaustiva de accesos quedan pendientes. La ratificación de una plaza nueva en el flujo antiguo aún usa `ADMIN`; el flujo nuevo de ofertas distingue al socio. Antes de atender clientes reales también se requiere revisar seguridad de despliegue, recuperación de cuentas, gestión de secretos, respaldo y restauración, retención de datos personales y cumplimiento legal. El esquema nuevo y el recorrido principal se probaron con SQLite y MySQL 8.4 temporal; faltan la migración de datos SQLite existentes y la verificación en el servidor definitivo.
+Las reglas de festivos y horarios variables, correos automáticos, firma del paquete de bienvenida, firma electrónica de ofertas, cálculo tributario y de prestaciones, antivirus, conservación y eliminación automatizada de candidaturas y auditoría exhaustiva de accesos quedan pendientes. La ratificación de una plaza nueva en el flujo antiguo aún usa `ADMIN`; el flujo nuevo de ofertas distingue al socio. Antes de atender clientes reales también se requiere revisar seguridad de despliegue, recuperación de cuentas, gestión de secretos, conservación externa y periodicidad de respaldos, retención de datos personales y cumplimiento legal. El esquema y el recorrido principal se probaron con SQLite y MySQL 8.4 temporal. En el servidor definitivo se verificaron el arranque, la migración y una restauración aislada del respaldo; faltan la migración de datos SQLite existentes y una prueba de recuperación completa en otro Droplet.
 
 ## Comprobación
 

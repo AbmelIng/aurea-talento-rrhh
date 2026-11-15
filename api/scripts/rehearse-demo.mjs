@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 
-const dataDir = resolve('data');
+const dataDir = resolve(process.env.AUREA_DEMO_DIR || 'data');
 const databaseFile = join(dataDir, 'aurea-demo.sqlite');
 const credentialsFile = join(dataDir, 'demo-credentials.json');
 const secretFile = join(dataDir, 'demo-secret.txt');
@@ -78,6 +78,12 @@ try {
   await request('GET', '/settings/catalogs', tokens.EMPLOYEE, undefined, 403);
   checks.push('Directorio, catálogos y rechazo de acceso no autorizado');
 
+  const careers = await request('GET', '/careers', null);
+  const vacancies = await request('GET', '/vacancies', tokens.HR_ADMIN);
+  assert.equal(careers.length, 1);
+  assert.equal(vacancies.length, 1);
+  checks.push('Vacante pública y consulta de RR. HH.');
+
   const ownEngagements = await request('GET', '/engagements', tokens.EMPLOYEE);
   const managedEngagements = await request('GET', '/engagements', tokens.MANAGER);
   const unrelatedEngagements = await request('GET', '/engagements', tokens.LEGAL);
@@ -101,6 +107,20 @@ try {
   await request('PATCH', `/payroll/timesheets/${queue[0].id}/review`, tokens.MANAGER,
     { approve: true });
   checks.push('Horas asociadas al encargo, envío y aprobación del gerente');
+
+  const balances = await request('GET', '/leave/balances', tokens.EMPLOYEE);
+  assert.equal(balances.length, 1);
+  const leave = await request('POST', '/leave/requests', tokens.EMPLOYEE, {
+    leave_type_id: balances[0].leave_type_id, start_date: period.end_date,
+    end_date: period.end_date, hours: 8, note: 'Ausencia de demostración',
+  }, 201);
+  const leaveQueue = await request('GET', '/leave/queue', tokens.MANAGER);
+  assert.equal(leaveQueue.length, 1);
+  await request('PATCH', `/leave/requests/${leave.id}/decision`, tokens.MANAGER,
+    { approve: true });
+  const remaining = await request('GET', '/leave/balances', tokens.EMPLOYEE);
+  assert.equal(Number(remaining[0].available_hours), 32);
+  checks.push('Solicitud de vacaciones, aprobación y descuento de saldo');
 
   const run = await request('POST', `/payroll/runs/${period.id}/generate`, tokens.PAYROLL, {}, 201);
   assert.equal(run.items.length, credentials.length);
