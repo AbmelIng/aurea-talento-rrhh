@@ -7,6 +7,8 @@
     "start": "node dist/main.js",
     "build": "tsc -p tsconfig.json",
     "bootstrap:admin": "npm run build && node dist/bootstrap-admin.js",
+    "demo:seed": "npm run build && node scripts/seed-demo.mjs",
+    "demo:rehearse": "npm run build && node scripts/rehearse-demo.mjs",
     "test": "npm run build && node --test tests/*.test.mjs",
     "test:mysql": "npm run build && node --test tests/mysql.integration.mjs"
   },
