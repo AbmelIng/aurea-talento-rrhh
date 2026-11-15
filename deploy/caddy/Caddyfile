@@ -1,0 +1,4 @@
+{$API_DOMAIN} {
+  header Cache-Control "private, no-store"
+  reverse_proxy api:3001
+}

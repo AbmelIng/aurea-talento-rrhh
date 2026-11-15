@@ -104,6 +104,18 @@ Importa el repositorio en Vercel y configura **Root Directory = `web`**. La conf
 
 En el servidor de la API, establece `WEB_ORIGIN` al dominio HTTPS del frontend. El Compose actual solo publica la API en la interfaz local: **no sirve como origen público de Vercel** hasta configurar el proxy HTTPS y el dominio del servidor. Tras conectar ambos servicios, comprueba `https://<frontend>/api/health`, la página `/empleos`, el inicio de sesión y una vista protegida. Un cambio en la variable de Vercel requiere un nuevo despliegue.
 
+### HTTPS público de la API
+
+Para la demostración, `compose.https.yaml` añade Caddy delante de la API. Configura `API_DOMAIN` en el `.env` del servidor con un nombre que resuelva a su IP pública; por ejemplo, `api.162-243-93-171.sslip.io` resuelve a `162.243.93.171` mediante el servicio público sslip.io. Para una instalación de clientes, usa un dominio propio. Los puertos 80 y 443 deben aceptar conexiones externas para obtener y renovar el certificado. La API y MySQL permanecen vinculados a `127.0.0.1` en el host.
+
+```bash
+docker compose -f compose.yaml -f compose.https.yaml config --quiet
+docker compose -f compose.yaml -f compose.https.yaml up -d --wait
+curl --fail https://api.162-243-93-171.sslip.io/api/health
+```
+
+Cuando se publique Angular, establece `WEB_ORIGIN` al origen exacto de Vercel y `AUREA_API_ORIGIN` en Vercel al origen HTTPS de la API, sin `/api`. Recrea la API con `docker compose -f compose.yaml -f compose.https.yaml up -d --wait`; los volúmenes de MySQL y documentos permanecen intactos. No ejecutes `docker compose down --volumes` sobre una instalación con datos.
+
 `api/src/database.ts` contiene migraciones versionadas. Las versiones 1–5 conservan las funciones anteriores. La versión 6 añade tratamiento de pago de ausencias, condiciones con vigencia, ajustes, cálculos y detalles históricos. La versión 7 crea clientes, engagements y asignaciones, y relaciona las entradas de tiempo con engagements. Las instalaciones anteriores se migran al arrancar sin borrar datos. Haz una copia de la base antes de actualizar.
 
 `api/data/` está excluido de la entrega mediante `.gitignore`. **No copies una base SQLite antigua con usuarios de demostración a una instalación nueva.** Para producción, usa una base vacía y ejecuta `bootstrap:admin` una sola vez. Los datos existentes no se eliminan automáticamente para evitar pérdida accidental.
