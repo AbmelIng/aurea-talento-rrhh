@@ -39,7 +39,7 @@ ready=0
 for _ in $(seq 1 90); do
   if docker exec "$container" sh -ec '
     export MYSQL_PWD="$MYSQL_ROOT_PASSWORD"
-    mysqladmin --user=root ping --silent
+    mysql --user=root --batch --skip-column-names -e "SELECT 1"
   ' >/dev/null 2>&1; then
     ready=1
     break
