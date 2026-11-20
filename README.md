@@ -1,6 +1,8 @@
 # Aurea Talento — sistema de RR. HH. y encargos de auditoría
 
-Aplicación Angular y NestJS con SQLite o MySQL. Este branch parte de la copia del sprint 8 y añade clientes y encargos de auditoría. La copia `aurea-talento-rrhh-sprint7` permanece disponible sin cambios. El tablero de Sprint Planning es otro proyecto.
+Aplicación Angular y NestJS con SQLite para desarrollo local y MySQL para el despliegue con Docker. Incluye los sprints 1–8, clientes y encargos de auditoría. El tablero de Sprint Planning es otro proyecto.
+
+**Entregable:** [aplicación publicada](https://aurea-talento-rrhh.vercel.app/) · [arquitectura y estado](docs/ARQUITECTURA_Y_ENTREGA.md) · [épicas](docs/requisitos/epicas_sistema_rrhh.md) · [User Story Mapping](docs/requisitos/UserStoryMapping.md) · [recorrido de presentación](docs/RECORRIDO_PRESENTACION.md).
 
 ## Instalación de desarrollo
 
